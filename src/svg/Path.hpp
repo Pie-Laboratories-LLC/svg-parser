@@ -1,0 +1,103 @@
+/*
+ * Copyright 2026 Pie Laboratories
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef DRAW2D_SVG_PATH_DOT_HPP
+#define DRAW2D_SVG_PATH_DOT_HPP
+
+#include <vector>
+#ifndef DRAW2D_SVG_PATHMOVE_DOT_HPP
+    #include "svg/PathMove.hpp"
+#endif
+#ifndef SVGENTITY_DOT_HPP
+    #include "svg/SvgEntity.hpp"
+#endif
+#ifndef DRAW2D_SVG_MATRIXMATH_DOT_HPP
+    #include "svg/MatrixMath.hpp"
+#endif
+
+namespace Draw2d::Svg {
+
+    struct SvgPathParams : public SvgEntityParams {
+        std::vector<float> points { };
+        std::vector<PathMove> pathMoves { };
+    };
+
+    class Path: public SvgEntity
+    {
+    public:
+        std::vector<float> getPoints() const { return m_points; }
+        std::vector<PathMove> getPathMoves() const { return m_pathMoves; }
+
+        Path(SvgPathParams svgPathParams);
+        virtual ~Path() = default;
+
+        Path(const Path &copy);
+        Path(Path &&copy);
+
+        /// standard case - gets the x value from a pair of points x, y at pointIndex and applies the supplied transform.
+        /// @note it retrieves the y to properly calculate x via matrix multiplication
+        float getX(unsigned index, std::optional<float> xOffset, std::optional<float> yOffset, const float *cpMatrix) const
+        {
+            float x = m_points[index] + xOffset.value_or(0);
+            float y = m_points[index + 1] + yOffset.value_or(0);
+            return (nullptr == cpMatrix) ? x : multiply6X(cpMatrix, x, y);
+        }
+
+        /// standard case - retrieves the y value from a pair of points x, y at pointIndex and applies the supplied transform
+        /// @note it retrieves the x to properly calculate x via matrix multiplication
+        float getY(unsigned index, std::optional<float> xOffset, std::optional<float> yOffset, const float *cpMatrix) const
+        {
+            float x = m_points[index] + xOffset.value_or(0);
+            float y = m_points[index + 1] + yOffset.value_or(0);
+            return (nullptr == cpMatrix) ? y : multiply6Y(cpMatrix, x, y);
+        }
+
+        /// this variant is for HorizontalLineTo; get the x from points, use y from the last known value
+        /// @note the x value is retrieved from index, the yValue is supplied
+        float getX(unsigned index, float yValue, std::optional<float> xOffset, std::optional<float> yOffset, const float *cpMatrix) const
+        {
+            float x = m_points[index] + xOffset.value_or(0);
+            float y = yValue + yOffset.value_or(0);
+            return (nullptr == cpMatrix) ? x : (x * cpMatrix[0] + y * cpMatrix[2] + cpMatrix[4]);
+        }
+
+        /// this variant is for VerticalLineTo; get the x from points, use x from the last known value
+        /// @note the y value is retrieved from index, the xValue is supplied
+        float getY(unsigned index, float xValue, std::optional<float> xOffset, std::optional<float> yOffset, const float *cpMatrix) const
+        {
+            float x = xValue + xOffset.value_or(0);
+            float y = m_points[index] + yOffset.value_or(0);
+            return (nullptr == cpMatrix) ? y : (x * cpMatrix[1] + y * cpMatrix[3] + cpMatrix[5]);
+        }
+
+        virtual const char * const getType() const override { return "Path"; }
+
+    private:
+        std::vector<float> m_points { };
+        std::vector<PathMove> m_pathMoves { };
+
+        void __checkPoint(float x, float y)
+        {
+            if (x < m_upperLeft.getX()) m_upperLeft.setX(x);
+            if (y < m_upperLeft.getY()) m_upperLeft.setY(y);
+            if (x > m_lowerRight.getX()) m_lowerRight.setX(x);
+            if (y > m_lowerRight.getY()) m_lowerRight.setY(y);
+        }
+    };
+
+} // namespace Draw2d::Svg
+
+#endif  /* DRAW2D_SVG_PATH_DOT_HPP */
