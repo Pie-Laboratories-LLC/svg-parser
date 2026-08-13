@@ -43,15 +43,13 @@ namespace Draw2d::Svg {
         SvgColourType getSvgColourType() const { return m_enumSvgColourType; }
         int getColourIndex() const { return m_nColourIndex; }
 
-        uint8_t *getBgrA() const { return (m_enumSvgColourType == SvgColourType::Bgr || m_enumSvgColourType == SvgColourType::BgrA) ? m_pBgra.get() : throw new SvgException("SvgColourType is {}, not rgb(a);", SvgColourTypeToString(m_enumSvgColourType).c_str()); }
-        unsigned getBgrALength() const { return (m_enumSvgColourType == SvgColourType::Bgr || m_enumSvgColourType == SvgColourType::BgrA) ? m_nBgraLength : throw new SvgException("SvgColourType is {}, not rgb(a);", SvgColourTypeToString(m_enumSvgColourType).c_str()); }
+        const std::optional<std::array<uint8_t,4>> &getBgrA() const { return (m_enumSvgColourType == SvgColourType::Bgr || m_enumSvgColourType == SvgColourType::BgrA) ? m_pBgra : throw new SvgException("SvgColourType is {}, not rgb(a);", SvgColourTypeToString(m_enumSvgColourType).c_str()); }
 
-        float *getHslA() const { return (m_enumSvgColourType == SvgColourType::Hsl || m_enumSvgColourType == SvgColourType::HslA) ? m_pHsla.get() : throw new SvgException("SvgColourType is {}, not hsl(a);", SvgColourTypeToString(m_enumSvgColourType).c_str()); }
-        unsigned getHslALength() const { return (m_enumSvgColourType == SvgColourType::Hsl || m_enumSvgColourType == SvgColourType::HslA) ? m_nHslaLength : throw new SvgException("SvgColourType is {}, not rgb(a);", SvgColourTypeToString(m_enumSvgColourType).c_str()); }
+        const std::optional<std::array<float,4>> getHslA() const { return (m_enumSvgColourType == SvgColourType::Hsl || m_enumSvgColourType == SvgColourType::HslA) ? m_pHsla : throw new SvgException("SvgColourType is {}, not hsl(a);", SvgColourTypeToString(m_enumSvgColourType).c_str()); }
 
         SvgColour() { m_enumSvgColourType = SvgColourType::None; }
-        SvgColour(SvgColourType svgColourType, int colourIndex = -1, std::unique_ptr<uint8_t[]> bgra = nullptr, unsigned nBgraLength = -1, std::unique_ptr<float[]> pHsla = nullptr, unsigned nHslaLength = -1);
-        SvgColour(SvgColourType svgColourType, int colourIndex, std::unique_ptr<uint8_t[]> bgra, unsigned nBgraLength, std::unique_ptr<float[]> pHsla, unsigned nHslaLength, std::unique_ptr<SvgColour> pFallback);
+        SvgColour(SvgColourType svgColourType, int colourIndex, std::optional<std::array<uint8_t,4>> bgra, std::optional<std::array<float,4>> pHsla, std::unique_ptr<SvgColour> pFallback);
+        SvgColour(SvgColourType svgColourType, int colourIndex = -1, std::optional<std::array<uint8_t,4>> bgra = std::nullopt, std::optional<std::array<float,4>> pHsla = std::nullopt);
 
         void setFallback(std::unique_ptr<SvgColour> pFallback) {
             m_pFallback = std::move(pFallback);
@@ -68,28 +66,25 @@ namespace Draw2d::Svg {
         SvgColour(const SvgColour &copy):
             m_enumSvgColourType(copy.m_enumSvgColourType)
            ,m_nColourIndex(copy.m_nColourIndex)
-           ,m_nBgraLength(copy.m_nBgraLength)
-           ,m_nHslaLength(copy.m_nHslaLength)
+           ,m_pBgra(copy.m_pBgra)
+           ,m_pHsla(copy.m_pHsla)
            ,m_pFallback(copy.m_pFallback ? std::make_unique<SvgColour>(*copy.m_pFallback) : nullptr)
         {
-            if(copy.m_pBgra) {
-                m_pBgra = std::make_unique<uint8_t[]>(m_nBgraLength);
-                std::copy(copy.m_pBgra.get(),copy.m_pBgra.get() + m_nBgraLength, m_pBgra.get());
-            }
-            if(copy.m_pHsla) {
-                m_pHsla = std::make_unique<float[]>(m_nHslaLength);
-                std::copy(copy.m_pHsla.get(),copy.m_pHsla.get() + m_nHslaLength, m_pHsla.get());
-            }
         }
 
         void swap(SvgColour &copy) noexcept;
+
+        inline friend void swap(SvgColour &a,SvgColour &b) noexcept {
+            a.swap(b);
+        }
 
         SvgColour &operator = (SvgColour copy) {
             swap(copy);
             return *this;
         }
 
-        SvgColour(SvgColour &&move) = default;
+        SvgColour(SvgColour &&move) noexcept = default;
+        SvgColour &operator = (SvgColour &&move) noexcept = default;
 
         bool operator == (const SvgColour &other) const
         {
@@ -102,13 +97,15 @@ namespace Draw2d::Svg {
 
             case SvgColourType::Bgr:
             case SvgColourType::BgrA:
-                return m_nBgraLength == other.m_nBgraLength &&
-                       std::equal(m_pBgra.get(), m_pBgra.get() + m_nBgraLength, other.m_pBgra.get());
+                return m_pBgra.has_value() == other.m_pBgra.has_value()
+                    && (!m_pBgra.has_value()
+                     || std::equal(m_pBgra.value().begin(), m_pBgra.value().end(), other.m_pBgra.value().begin()));
 
             case SvgColourType::Hsl:
             case SvgColourType::HslA:
-                return m_nHslaLength == other.m_nHslaLength &&
-                       std::equal(m_pHsla.get(), m_pHsla.get() + m_nHslaLength, other.m_pHsla.get());
+                return m_pHsla.has_value() == other.m_pHsla.has_value()
+                    && (!m_pHsla.has_value()
+                     || std::equal(m_pHsla.value().begin(), m_pHsla.value().end(), other.m_pHsla.value().begin()));
 
             default: throw SvgException("Invalid illegal unsupported/unknown unhandled unrecognized garbage SvgColourType {}", SvgColourTypeToString(m_enumSvgColourType).c_str());
             }
@@ -125,20 +122,9 @@ namespace Draw2d::Svg {
     private:
         SvgColourType m_enumSvgColourType = SvgColourType::NotAnSvgColourType;
         int m_nColourIndex = -1;
-        std::unique_ptr<uint8_t[]> m_pBgra = nullptr;
-        unsigned m_nBgraLength = -1;
-        std::unique_ptr<float[]> m_pHsla = nullptr;
-        unsigned m_nHslaLength = -1;
+        std::optional<std::array<uint8_t,4>> m_pBgra = std::nullopt;
+        std::optional<std::array<float,4>> m_pHsla = std::nullopt;
         std::unique_ptr<SvgColour> m_pFallback = nullptr;
-
-        void __doCopy(const SvgColour &copy)
-        {
-            m_enumSvgColourType = copy.m_enumSvgColourType;
-            m_nColourIndex = copy.m_nColourIndex;
-            m_nBgraLength = copy.m_nBgraLength;
-            m_pBgra = std::make_unique<uint8_t[]>(m_nBgraLength);
-            std::copy(copy.m_pBgra.get(), copy.m_pBgra.get() + copy.m_nBgraLength, m_pBgra.get());
-        }
     }; // class SvgColour
 
     Colour hslaToRgba(float fH, float fS, float fL, float fA = 1.0f);

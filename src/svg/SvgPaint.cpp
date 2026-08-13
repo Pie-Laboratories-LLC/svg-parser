@@ -51,10 +51,11 @@ namespace Draw2d::Svg {
 
     void SvgPaint::swap(SvgPaint &copy) noexcept
     {
-        std::swap(m_enumSvgColourType,copy.m_enumSvgColourType);
-        std::swap(m_strGradientId,copy.m_strGradientId);
-        std::swap(m_colour,copy.m_colour);
-        std::swap(m_fallback,copy.m_fallback);
+        using std::swap;
+        swap(m_enumSvgColourType,copy.m_enumSvgColourType);
+        swap(m_strGradientId,copy.m_strGradientId);
+        swap(m_colour,copy.m_colour);
+        swap(m_fallback,copy.m_fallback);
     }
 
     bool SvgPaint::operator ==(const SvgPaint &other) const

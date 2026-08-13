@@ -44,14 +44,6 @@ namespace Draw2d {
             m_fAlpha = alpha;
         }
         
-        Colour(const Colour &copy)
-        {
-            m_fRed = copy.m_fRed;
-            m_fGreen = copy.m_fGreen;
-            m_fBlue = copy.m_fBlue;
-            m_fAlpha = copy.m_fAlpha;
-        }
-
         Colour(const Colour &copy,float fNewAlpha)
         {
             m_fRed = copy.m_fRed;

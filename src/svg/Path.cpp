@@ -51,8 +51,7 @@ namespace Draw2d::Svg {
                 if (nPointIndex + 1 > m_points.size()) throw SvgException(std::format("Not enough m_points at PathMove[{}] {}; ({} / {})", i, PathMoveToString(m_pathMoves[i]), nPointIndex, m_points.size()));
                 // this is really paranoia: this shouldn't be possible coming from SvgDParser.
                 if(!bLastPointSet) throw SvgException("Internal error.  Encountered a VerticalLineTo but no previous point has been seen.");
-                lastPoint.setX(lastPoint.getX());
-                lastPoint.setY(getY(nPointIndex, m_fX.value_or(0), m_fY.value_or(0),getMatrix()));
+                lastPoint.setY(getY(nPointIndex, lastPoint.getX(), m_fX.value_or(0), m_fY.value_or(0),getMatrix()));
                 __checkPoint(lastPoint.getX(), lastPoint.getY());
                 nPointIndex++;
                 break;
@@ -61,8 +60,7 @@ namespace Draw2d::Svg {
                 if (nPointIndex + 1 > m_points.size()) throw SvgException(std::format("Not enough m_points at PathMove[{}] {}; ({} / {})", i, PathMoveToString(m_pathMoves[i]), nPointIndex, m_points.size()));
                 // this is really paranoia: this shouldn't be possible coming from SvgDParser.
                 if(!bLastPointSet) throw SvgException("Internal error.  Encountered a HorizontalLineTo but no previous point has been seen.");
-                lastPoint.setX(getX(nPointIndex, m_fX.value_or(0), m_fY.value_or(0), getMatrix()));
-                lastPoint.setY(lastPoint.getY());
+                lastPoint.setX(getX(nPointIndex, lastPoint.getY(), m_fX.value_or(0), m_fY.value_or(0), getMatrix()));
                 __checkPoint(lastPoint.getX(), lastPoint.getY());
                 nPointIndex++;
                 break;

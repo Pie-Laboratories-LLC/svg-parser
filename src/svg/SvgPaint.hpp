@@ -35,6 +35,7 @@ namespace Draw2d::Svg {
         SvgPaint(SvgColourType enumColourType, const Core::String &strGradientId = "", const SvgColour &colour = SvgColour { SvgColourType::None });
         SvgPaint(const SvgPaint &copy);
         SvgPaint(SvgPaint &&move) noexcept;
+        SvgPaint &operator = (SvgPaint &&move) noexcept = default;
         SvgPaint &operator =(SvgPaint copy);
         ~SvgPaint() = default;
 

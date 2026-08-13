@@ -49,38 +49,38 @@ namespace Draw2d::Svg {
 
         /// standard case - gets the x value from a pair of points x, y at pointIndex and applies the supplied transform.
         /// @note it retrieves the y to properly calculate x via matrix multiplication
-        float getX(unsigned index, std::optional<float> xOffset, std::optional<float> yOffset, const float *cpMatrix) const
+        float getX(unsigned index, std::optional<float> xOffset, std::optional<float> yOffset, const std::optional<const std::array<float,6>> &matrix) const
         {
             float x = m_points[index] + xOffset.value_or(0);
             float y = m_points[index + 1] + yOffset.value_or(0);
-            return (nullptr == cpMatrix) ? x : multiply6X(cpMatrix, x, y);
+            return (!matrix.has_value()) ? x : multiply6X(matrix.value(), x, y);
         }
 
         /// standard case - retrieves the y value from a pair of points x, y at pointIndex and applies the supplied transform
         /// @note it retrieves the x to properly calculate x via matrix multiplication
-        float getY(unsigned index, std::optional<float> xOffset, std::optional<float> yOffset, const float *cpMatrix) const
+        float getY(unsigned index, std::optional<float> xOffset, std::optional<float> yOffset, const std::optional<std::array<float,6>> &matrix) const
         {
             float x = m_points[index] + xOffset.value_or(0);
             float y = m_points[index + 1] + yOffset.value_or(0);
-            return (nullptr == cpMatrix) ? y : multiply6Y(cpMatrix, x, y);
+            return (!matrix.has_value()) ? y : multiply6Y(matrix.value(), x, y);
         }
 
         /// this variant is for HorizontalLineTo; get the x from points, use y from the last known value
         /// @note the x value is retrieved from index, the yValue is supplied
-        float getX(unsigned index, float yValue, std::optional<float> xOffset, std::optional<float> yOffset, const float *cpMatrix) const
+        float getX(unsigned index, float yValue, std::optional<float> xOffset, std::optional<float> yOffset, const std::optional<std::array<float,6>> &matrix) const
         {
             float x = m_points[index] + xOffset.value_or(0);
             float y = yValue + yOffset.value_or(0);
-            return (nullptr == cpMatrix) ? x : (x * cpMatrix[0] + y * cpMatrix[2] + cpMatrix[4]);
+            return (!matrix.has_value()) ? x : (x * matrix.value()[0] + y * matrix.value()[2] + matrix.value()[4]);
         }
 
         /// this variant is for VerticalLineTo; get the x from points, use x from the last known value
         /// @note the y value is retrieved from index, the xValue is supplied
-        float getY(unsigned index, float xValue, std::optional<float> xOffset, std::optional<float> yOffset, const float *cpMatrix) const
+        float getY(unsigned index, float xValue, std::optional<float> xOffset, std::optional<float> yOffset, const std::optional<std::array<float,6>> &matrix) const
         {
             float x = xValue + xOffset.value_or(0);
             float y = m_points[index] + yOffset.value_or(0);
-            return (nullptr == cpMatrix) ? y : (x * cpMatrix[1] + y * cpMatrix[3] + cpMatrix[5]);
+            return (!matrix.has_value()) ? y : (x * matrix.value()[1] + y * matrix.value()[3] + matrix.value()[5]);
         }
 
         virtual const char * const getType() const override { return "Path"; }

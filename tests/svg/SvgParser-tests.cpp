@@ -20,6 +20,13 @@
 
 #include "svg/SvgParser.hpp"
 
+#ifndef SVG_PATH_DOT_HPP
+    #include "svg/Path.hpp"
+#endif
+#ifndef SVG_GROUP_DOT_HPP
+    #include "svg/Group.hpp"
+#endif
+
 TEST_CASE("1a. Single Line Segment", "[path][svg]") {
     Draw2d::Svg::SvgParser svgParser {};
     auto svg1a = R"xxx(<svg><path id="p1a" d="M 0 0 L 10 10 Z"/></svg>)xxx";
@@ -68,10 +75,17 @@ TEST_CASE("1f. Path not closed (should throw)", "[path][svg]") {
     REQUIRE( result != nullptr );
 }
 
-TEST_CASE("1g. Malformed — L before any M (should throw)", "[path][svg]") {
+TEST_CASE("1g. Malformed — L before any M (should insert MoveTo)", "[path][svg]") {
     Draw2d::Svg::SvgParser svgParser {};
     auto svg1g = R"xxx(<svg><path id="p1g" d="L 10 10 Z"/></svg>)xxx";
-    REQUIRE_THROWS_AS (svgParser.parse(svg1g), Draw2d::Svg::SvgException);
+    auto svgDocument = svgParser.parse(svg1g);
+    auto result = svgDocument.get()->lookupSvgEntity("p1g");
+    REQUIRE( result != nullptr );
+    const Draw2d::Svg::Path *cpPath = static_cast<const Draw2d::Svg::Path *>(result);
+    REQUIRE( cpPath->getPathMoves().size() == 3 );
+    REQUIRE( cpPath->getPathMoves()[0] == Draw2d::Svg::PathMove::MoveTo );
+    REQUIRE( cpPath->getPathMoves()[1] == Draw2d::Svg::PathMove::LineTo );
+    REQUIRE( cpPath->getPathMoves()[2] == Draw2d::Svg::PathMove::ClosePath );
 }
 
 TEST_CASE("1h. Double M in a row", "[path][svg]") {
@@ -135,7 +149,7 @@ TEST_CASE("2d. Group with transform (single matrix)", "[group][svg]") {
 
 TEST_CASE("2e. Group with unrecognized child element (should throw)", "[group][svg]") {
     Draw2d::Svg::SvgParser svgParser {};
-    auto svg2e = R"xxx(<svg><g id="g2e"><circle cx="5" cy="5" r="3"/></g></svg>)xxx";
+    auto svg2e = R"xxx(<svg><g id="g2e"><triangle cx="5" cy="5" r="3"/></g></svg>)xxx";
     REQUIRE_THROWS_AS ( svgParser.parse(svg2e), Draw2d::Svg::SvgException );
 }
 
@@ -649,7 +663,7 @@ auto svg8g = R"xxx(
     REQUIRE( pResult != nullptr );
 }
 
-TEST_CASE("9a. Direct self-reference (use pointing at itself)", "[self-reference][svg]") {
+TEST_CASE("9a. Direct self-reference (use pointing at itself)", "[self-reference][svg][xxx]") {
     Draw2d::Svg::SvgParser svgParser {};
     auto svg9b = R"xxx(
 <svg>
@@ -732,7 +746,7 @@ TEST_CASE("9g. Two-node cycle (A references B, B references A), one in defs", "[
     REQUIRE_THROWS_AS ( svgParser.parse(svg9g), Draw2d::Svg::SvgException );
 }
 
-TEST_CASE("9h. use -> defs group -> use -> back to the enclosing group", "[use][self-reference][throws][svg][xxx]") {
+TEST_CASE("9h. use -> defs group -> use -> back to the enclosing group", "[use][self-reference][throws][svg]") {
     Draw2d::Svg::SvgParser svgParser {};
     auto svg9h = R"xxx(
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">

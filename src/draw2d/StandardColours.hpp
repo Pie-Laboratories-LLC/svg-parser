@@ -36,42 +36,44 @@ namespace Draw2d {
         // obnoxiously, with duplicates 😡 https://www.w3.org/wiki/CSS/Properties/color/keywords
         static std::map<Core::String,Core::String> Colours;
 
-        static std::unique_ptr<uint8_t[]> RgbOf(const Core::String &name) {
+        static std::array<uint8_t,4> RgbOf(const Core::String &name) {
             if(!Colours.contains(name)) throw Draw2dException("{} does not name a standard colour", name.c_str());
             Core::String rgbValue = Colours[name];
             return ParseRgb(rgbValue);
         }
 
-        static std::unique_ptr<uint8_t[]> ParseRgb(const Core::String &rgbValue)
+        static std::array<uint8_t,4> ParseRgb(const Core::String &rgbValue)
         {
             // ultimately, this should support rgb & rgba...
             if (rgbValue.length() != 6 && rgbValue.length() != 3) throw Draw2dException("not a valid rgb value {}", rgbValue.c_str());
-            std::unique_ptr<uint8_t[]> pRgb = std::make_unique<uint8_t[]>(3);
+            std::array<uint8_t,4> rgba { };
             if (rgbValue.length() == 3)
             {
                 // i.e., string looks like "fff" where each channel has single (hex) digit
                 // is there a worse way to do this? I mean if I applied myself
-                pRgb[0] = (uint8_t)Core::ParseInteger(rgbValue.substr(0, 1) + rgbValue.substr(0, 1), 16);
-                pRgb[1] = (uint8_t)Core::ParseInteger(rgbValue.substr(1, 1) + rgbValue.substr(1, 1), 16);
-                pRgb[2] = (uint8_t)Core::ParseInteger(rgbValue.substr(2, 1) + rgbValue.substr(2, 1), 16);
+                rgba[0] = (uint8_t)Core::ParseInteger(rgbValue.substr(0, 1) + rgbValue.substr(0, 1), 16);
+                rgba[1] = (uint8_t)Core::ParseInteger(rgbValue.substr(1, 1) + rgbValue.substr(1, 1), 16);
+                rgba[2] = (uint8_t)Core::ParseInteger(rgbValue.substr(2, 1) + rgbValue.substr(2, 1), 16);
             }
             else
             {
-                pRgb[0] = (uint8_t)Core::ParseInteger(rgbValue.substr(0, 2), 16);
-                pRgb[1] = (uint8_t)Core::ParseInteger(rgbValue.substr(2, 2), 16);
-                pRgb[2] = (uint8_t)Core::ParseInteger(rgbValue.substr(4, 2), 16);
+                rgba[0] = (uint8_t)Core::ParseInteger(rgbValue.substr(0, 2), 16);
+                rgba[1] = (uint8_t)Core::ParseInteger(rgbValue.substr(2, 2), 16);
+                rgba[2] = (uint8_t)Core::ParseInteger(rgbValue.substr(4, 2), 16);
             }
+            rgba[3] = 0xff;
 
-            return pRgb;
+            return rgba;
         }
 
-        static std::unique_ptr<uint8_t[]> BgrOf(const Core::String &name) {
+        static std::array<uint8_t,4> BgrOf(const Core::String &name) {
             Core::String rgbValue = Colours[name];
-            std::unique_ptr<uint8_t[]> bgr = std::make_unique<uint8_t[]>(3);
-            bgr[0] = (uint8_t)Core::ParseInteger(rgbValue.substr(4,2),16);
-            bgr[1] = (uint8_t)Core::ParseInteger(rgbValue.substr(2,2),16);
-            bgr[2] = (uint8_t)Core::ParseInteger(rgbValue.substr(0,2),16);
-            return bgr;
+            std::array<uint8_t,4> bgra { };
+            bgra[0] = (uint8_t)Core::ParseInteger(rgbValue.substr(4,2),16);
+            bgra[1] = (uint8_t)Core::ParseInteger(rgbValue.substr(2,2),16);
+            bgra[2] = (uint8_t)Core::ParseInteger(rgbValue.substr(0,2),16);
+            bgra[3] = 0xff;
+            return bgra;
         }
     };
 

@@ -39,14 +39,6 @@ namespace Draw2d::Svg {
         {
         }
 
-        /*
-        // note -- SvgEntity doesn't do &&, but that's ok.
-        Group(const Group &&replace): SvgContainerEntity(replace) {
-            m_svgEntities = std::move(replace.m_svgEntities);
-            m_fOpacity = replace.m_fOpacity;
-        }
-        */
-
         virtual SvgEntity *addChild(std::unique_ptr<SvgEntity> pSvgEntity) override {
             m_svgEntities.push_back(std::move(pSvgEntity));
             SvgEntity *toReturn = m_svgEntities.back().get();

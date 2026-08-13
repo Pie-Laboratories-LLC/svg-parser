@@ -110,6 +110,8 @@ namespace Draw2d::Svg {
                             else {
                                 __insertLastMoveto();
                             }
+                            // in either case, we've inserted a moveto now.
+                            moveTo = true;
                         }
                         break;
                     }

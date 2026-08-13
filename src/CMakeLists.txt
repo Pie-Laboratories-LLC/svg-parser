@@ -28,7 +28,6 @@ add_library(svgparser
     svg/SvgPaint.cpp
     svg/SvgParser.cpp
     svg/SvgParserContext.cpp
-    svg/SvgRendererContext.cpp
 )
 add_library(svgparser::svgparser ALIAS svgparser)
 
@@ -54,7 +53,10 @@ if(SVGPARSER_WITH_XERCES)
     find_package(XercesC REQUIRED)
 
     target_sources(svgparser PRIVATE
-        xml/DomParser.cpp
+        xml/XercesDomParserBuilder.cpp
+        xml/XercesDomParser.cpp
+        xml/XercesDomDocument.cpp
+        xml/XercesDomEntity.cpp
         xml/String.cpp
         xml/XmlExceptionType.cpp
     )

@@ -22,7 +22,7 @@ namespace Draw2d::Svg {
         m_svgDocument(params.svgDocument)
        ,m_bRender(params.render)
        ,m_strId(params.id)
-       ,m_pMatrix(std::move(params.pMatrix))
+       ,m_matrix(std::move(params.matrix))
        ,m_fillColour(params.fillColour)
        ,m_fFillOpacity(params.fillOpacity)
        ,m_enumFillRule(params.fillRule)
@@ -38,6 +38,7 @@ namespace Draw2d::Svg {
     {
     }
 
+    /*
     SvgEntity::SvgEntity(const SvgEntity &copy):
         m_svgDocument(copy.m_svgDocument)
     {
@@ -56,9 +57,7 @@ namespace Draw2d::Svg {
         m_enumLineCap = copy.m_enumLineCap;
         m_enumLineJoin = copy.m_enumLineJoin;
         m_fMiterLimit = copy.m_fMiterLimit;
-        m_dashArray.clear();
-        m_dashArray.reserve(copy.m_dashArray.size());
-        for(unsigned i = 0; i < copy.m_dashArray.size(); i++) m_dashArray[i] = copy.m_dashArray[i];
+        m_dashArray = copy.m_dashArray;
         m_strCssClass = copy.m_strCssClass;
         m_strCssStyle = copy.m_strCssStyle;
     }
@@ -67,7 +66,7 @@ namespace Draw2d::Svg {
         m_svgDocument(move.m_svgDocument)
        ,m_bRender(move.m_bRender)
        ,m_strId(move.m_strId)
-       ,m_pMatrix(std::move(move.m_pMatrix))
+       ,m_matrix(std::move(move.m_matrix))
        ,m_upperLeft(move.m_upperLeft)
        ,m_lowerRight(move.m_lowerRight)
        ,m_fX(move.m_fX)
@@ -87,5 +86,6 @@ namespace Draw2d::Svg {
        ,m_strCssClass(move.m_strCssClass)
        ,m_strCssStyle(move.m_strCssStyle)
     {}
+    */
 
 }

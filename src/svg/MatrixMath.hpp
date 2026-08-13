@@ -17,50 +17,50 @@
 #ifndef DRAW2D_SVG_MATRIXMATH_DOT_HPP
 #define DRAW2D_SVG_MATRIXMATH_DOT_HPP
 
-#include <memory>
+#include <array>
 
 namespace Draw2d::Svg {
 
     template<typename T>
-    std::unique_ptr<T[]> multiply6s(const T *pLeft, const T *pRight)
+    std::array<T,6> multiply6s(const std::array<T,6> &left, const std::array<T,6> &right)
     {
-        std::unique_ptr<float[]> combinedMatrix = std::make_unique<float[]>(6);
+        std::array<T,6> combinedMatrix { };
 
-        combinedMatrix[0] = pLeft[0] * pRight[0] + pLeft[2] * pRight[1] + pLeft[4] * 0;
-        combinedMatrix[1] = pLeft[1] * pRight[0] + pLeft[3] * pRight[1] + pLeft[5] * 0;
-        combinedMatrix[2] = pLeft[0] * pRight[2] + pLeft[2] * pRight[3] + pLeft[4] * 0;
-        combinedMatrix[3] = pLeft[1] * pRight[2] + pLeft[3] * pRight[3] + pLeft[5] * 0;
-        combinedMatrix[4] = pLeft[0] * pRight[4] + pLeft[2] * pRight[5] + pLeft[4] * 1;
-        combinedMatrix[5] = pLeft[1] * pRight[4] + pLeft[3] * pRight[5] + pLeft[5] * 1;
+        combinedMatrix[0] = left[0] * right[0] + left[2] * right[1] + left[4] * 0;
+        combinedMatrix[1] = left[1] * right[0] + left[3] * right[1] + left[5] * 0;
+        combinedMatrix[2] = left[0] * right[2] + left[2] * right[3] + left[4] * 0;
+        combinedMatrix[3] = left[1] * right[2] + left[3] * right[3] + left[5] * 0;
+        combinedMatrix[4] = left[0] * right[4] + left[2] * right[5] + left[4] * 1;
+        combinedMatrix[5] = left[1] * right[4] + left[3] * right[5] + left[5] * 1;
 
         return combinedMatrix;
     }
 
     template<typename T>
-    void multiply6s(T *pCombinedMatrix, const T *pLeft, const T *pRight)
+    void multiply6s(std::array<T,6> &combinedMatrix, const std::array<T,6> &left, const std::array<T,6> &right)
     {
-        pCombinedMatrix[0] = pLeft[0] * pRight[0] + pLeft[2] * pRight[1] + pLeft[4] * 0;
-        pCombinedMatrix[1] = pLeft[1] * pRight[0] + pLeft[3] * pRight[1] + pLeft[5] * 0;
-        pCombinedMatrix[2] = pLeft[0] * pRight[2] + pLeft[2] * pRight[3] + pLeft[4] * 0;
-        pCombinedMatrix[3] = pLeft[1] * pRight[2] + pLeft[3] * pRight[3] + pLeft[5] * 0;
-        pCombinedMatrix[4] = pLeft[0] * pRight[4] + pLeft[2] * pRight[5] + pLeft[4] * 1;
-        pCombinedMatrix[5] = pLeft[1] * pRight[4] + pLeft[3] * pRight[5] + pLeft[5] * 1;
+        combinedMatrix[0] = left[0] * right[0] + left[2] * right[1] + left[4] * 0;
+        combinedMatrix[1] = left[1] * right[0] + left[3] * right[1] + left[5] * 0;
+        combinedMatrix[2] = left[0] * right[2] + left[2] * right[3] + left[4] * 0;
+        combinedMatrix[3] = left[1] * right[2] + left[3] * right[3] + left[5] * 0;
+        combinedMatrix[4] = left[0] * right[4] + left[2] * right[5] + left[4] * 1;
+        combinedMatrix[5] = left[1] * right[4] + left[3] * right[5] + left[5] * 1;
     }
 
     /// calculates the x value of an x, y pair given an svg 6-element matrix
     template<typename T>
-    T multiply6X(const T *cpLeft, T x, T y) {
+    T multiply6X(const std::array<T,6> &left, T x, T y) {
         T originalX = x;
         T originalY = y;
-        return originalX * cpLeft[0] + originalY * cpLeft[2] + cpLeft[4];
+        return originalX * left[0] + originalY * left[2] + left[4];
     }
 
     /// calculates the y value of an x, y pair given an svg 6-element matrix
     template<typename T>
-    T multiply6Y(const T *cpLeft, T x, T y) {
+    T multiply6Y(const std::array<float,6> &left, T x, T y) {
         T originalX = x;
         T originalY = y;
-        return originalX * cpLeft[1] + originalY * cpLeft[3] + cpLeft[5];
+        return originalX * left[1] + originalY * left[3] + left[5];
     }
 
     /// calculates the y value of a 2d vector given an svg 6-element matrix
@@ -79,19 +79,20 @@ namespace Draw2d::Svg {
     }
 
     template<typename T>
-    void multiply6XY(const T *cpLeft, T &x, T &y) {
+    void multiply6XY(const std::array<float,6> left, T &x, T &y) {
         T originalX = x;
         T originalY = y;
-        x = originalX * cpLeft[0] + originalY * cpLeft[2] + cpLeft[4];
-        y = originalX * cpLeft[1] + originalY * cpLeft[3] + cpLeft[5];
+        x = originalX * left[0] + originalY * left[2] + left[4];
+        y = originalX * left[1] + originalY * left[3] + left[5];
     }
 
     template<typename T>
-    std::unique_ptr<T[]> duplicateMatrix6(const T *pMatrix)
+    std::array<T,6> duplicateMatrix6(const std::array<T,6> &matrix)
     {
-        std::unique_ptr<float[]> pDuplicate = std::make_unique<float[]>(6);
-        std::copy(pMatrix, pMatrix + 6, pDuplicate.get());
-        return pDuplicate;
+        // TODO this method is now officially dumb
+        std::array<T,6> duplicate { };
+        std::copy(matrix.begin(), matrix.end(), duplicate.begin());
+        return duplicate;
     }
 
 }

@@ -18,7 +18,6 @@
 #define DRAW2D_SVGENTITY_DOT_HPP
 
 #include <optional>
-#include <memory>
 #ifndef STRING_DOT_HPP
     #include "core/String.hpp"
 #endif
@@ -52,7 +51,7 @@ namespace Draw2d::Svg {
         Core::String id { };
         Core::String cssStyle { };
         Core::String cssClass { };
-        std::unique_ptr<float[]> pMatrix = nullptr;
+        std::optional<std::array<float,6>> matrix { std::nullopt };
         SvgPaint fillColour { SvgColourType::None };
         FillRule fillRule;
         float fillOpacity = 1.0f;
@@ -73,7 +72,7 @@ namespace Draw2d::Svg {
         SvgDocument &getDocument() const { return m_svgDocument; }
         virtual bool getRender() const { return m_bRender; }
         virtual const Core::String &getId() const { return m_strId; }
-        virtual const float * const getMatrix() const { return m_pMatrix.get(); }
+        virtual const std::optional<std::array<float,6>> &getMatrix() const { return m_matrix; }
         virtual const Draw2d::Point &getUpperLeft() const { return m_upperLeft; }
         virtual const Draw2d::Point &getLowerRight() const { return m_lowerRight; }
 
@@ -94,15 +93,17 @@ namespace Draw2d::Svg {
         virtual const char * const getType() const { return "SvgEntity"; }
 
         SvgEntity(SvgEntityParams params);
-        SvgEntity(const SvgEntity &copy);
-        SvgEntity(SvgEntity &&move);
+        SvgEntity(const SvgEntity &copy) = default;
+        SvgEntity &operator = (const SvgEntity &copy) = delete;
+        SvgEntity(SvgEntity &&move) = default;
+        SvgEntity &operator = (SvgEntity &&move) = delete;
         virtual ~SvgEntity() = default;
 
     protected:
         SvgDocument &m_svgDocument;
         bool m_bRender = true;
         Core::String m_strId { };
-        std::unique_ptr<float[]> m_pMatrix = nullptr;
+        std::optional<std::array<float,6>> m_matrix { };
         Draw2d::Point m_upperLeft { std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
         Draw2d::Point m_lowerRight { std::numeric_limits<float>::min(), std::numeric_limits<float>::min() };
         std::optional<float> m_fX = {};

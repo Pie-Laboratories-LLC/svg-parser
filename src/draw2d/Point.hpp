@@ -37,12 +37,6 @@ namespace Draw2d {
             m_y = y;
         }
 
-        Point(const Point &copy)
-        {
-            m_x = copy.m_x;
-            m_y = copy.m_y;
-        }
-
         void Set(double dX, double dY)
         {
             m_x = dX;

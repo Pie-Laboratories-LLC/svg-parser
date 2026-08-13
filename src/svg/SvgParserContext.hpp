@@ -24,9 +24,6 @@
 #ifndef DRAW2D_SVG_MATRIXMATHS_DOT_HPP
     #include "svg/MatrixMath.hpp"
 #endif
-#ifndef CORE_STDUNIQUEPTREXTENSIONS_DOT_HPP
-    #include "core/StdUniquePtrExtensions.hpp"
-#endif
 #ifndef DRAW2D_SVG_FILLRULE_DOT_HPP
     #include "svg/FillRule.hpp"
 #endif
@@ -87,25 +84,13 @@ namespace Draw2d::Svg {
         void setX(float fX) { m_fX = fX; }
         float getY() const { return m_fY; }
         void setY(float fY) { m_fY = fY; }
-        const float *getMatrix() const { return m_pMatrix; }
+        const std::array<float,6> getMatrix() const { return m_matrix; }
         static const SvgPaint &getDefaultStrokeColour() { return sm_defaultStrokeColour; }
         static const SvgPaint &getDefaultFillColour() { return sm_defaultFillColour; }
 
-        SvgParserContext() = default;
-
-        SvgParserContext(const SvgParserContext &copy) = default;
-        SvgParserContext &operator =(SvgParserContext copy) noexcept {
-            swap(copy);
-            return *this;
-        }
-
-        void swap(SvgParserContext &other);
-
-        void multiplyRight(const float *cpMatrix)
+        void multiplyRight(const std::array<float,6> matrix)
         {
-            float pNewMatrix[6];
-            multiply6s<float>(pNewMatrix, m_pMatrix, cpMatrix);
-            std::copy(pNewMatrix, pNewMatrix + 6, m_pMatrix);
+            m_matrix = multiply6s(m_matrix, matrix);
         }
 
         SvgParserContext updateDrawProperties(const SvgParserContext &reference, const SvgEntity *cpSvgEntity);
@@ -115,7 +100,7 @@ namespace Draw2d::Svg {
         bool m_bRender = true;
         float m_fViewportWidth = 0.0f;
         float m_fViewportHeight = 0.0f;
-        SvgColour m_colour { SvgColourType::Bgr, -1, Core::makeUniqueArray<uint8_t>({ 0, 0, 0 }), 3 };
+        SvgColour m_colour { SvgColourType::Bgr, -1, { { 0, 0, 0, 0xff } } };
         std::optional<SvgPaint> m_fillColour = {};
         FillRule m_enumFillRule = FillRule::NonZero;
         float m_fFillOpacity = 1.0;
@@ -130,7 +115,7 @@ namespace Draw2d::Svg {
         float m_fDashOffset = 0.0f;
         float m_fX = 0.0f;
         float m_fY = 0.0f;
-        float m_pMatrix[6] = { 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f };
+        std::array<float,6> m_matrix = { 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f };
 
         static SvgPaint sm_defaultStrokeColour;
         static SvgPaint sm_defaultFillColour;

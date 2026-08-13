@@ -21,12 +21,13 @@
 
 namespace Draw2d::Svg {
 
-    SvgColour::SvgColour(SvgColourType enumSvgColourType, int colourIndex, std::unique_ptr<uint8_t[]> pBgra, unsigned nBgraLength, std::unique_ptr<float[]> pHsla, unsigned nHslaLength)
+    SvgColour::SvgColour(SvgColourType enumSvgColourType, int colourIndex, std::optional<std::array<uint8_t,4>> pBgra, std::optional<std::array<float,4>> pHsla, std::unique_ptr<SvgColour> pFallback):
+        m_enumSvgColourType(enumSvgColourType)
+       ,m_pFallback(std::move(pFallback))
     {
-        m_enumSvgColourType = enumSvgColourType;
 
-        if(pBgra && enumSvgColourType != SvgColourType::Bgr && enumSvgColourType != SvgColourType::BgrA) throw SvgException(std::format("SvgColourType {} doesn't support bgr(a) but it was supplied!", SvgColourTypeToString(enumSvgColourType).c_str()));
-        if(pHsla && enumSvgColourType != SvgColourType::Hsl && enumSvgColourType != SvgColourType::HslA) throw SvgException(std::format("SvgColourType {} doesn't support bgr(a) but it was supplied!", SvgColourTypeToString(enumSvgColourType).c_str()));
+        if(pBgra.has_value() && enumSvgColourType != SvgColourType::Bgr && enumSvgColourType != SvgColourType::BgrA) throw SvgException(std::format("SvgColourType {} doesn't support bgr(a) but it was supplied!", SvgColourTypeToString(enumSvgColourType).c_str()));
+        if(pHsla.has_value() && enumSvgColourType != SvgColourType::Hsl && enumSvgColourType != SvgColourType::HslA) throw SvgException(std::format("SvgColourType {} doesn't support bgr(a) but it was supplied!", SvgColourTypeToString(enumSvgColourType).c_str()));
 
         switch (enumSvgColourType)
         {
@@ -37,27 +38,15 @@ namespace Draw2d::Svg {
             break;
 
         case SvgColourType::Bgr:
-            if ((nullptr == pBgra) || (nBgraLength != 3)) throw SvgException(std::format("3 values are required for bgr with {}, not {}", SvgColourTypeToString(enumSvgColourType).c_str(), nBgraLength));
-            m_pBgra = std::move(pBgra);
-            m_nBgraLength = nBgraLength;
-            break;
-
         case SvgColourType::BgrA:
-            if ((nullptr == pBgra) || (nBgraLength != 4)) throw SvgException(std::format("4 values are required for bgr with {}, not {}", SvgColourTypeToString(enumSvgColourType).c_str(), nBgraLength));
+            if (!pBgra.has_value()) throw SvgException(std::format("bgra values are required for bgr of type {}", SvgColourTypeToString(enumSvgColourType).c_str()));
             m_pBgra = std::move(pBgra);
-            m_nBgraLength = nBgraLength;
             break;
 
         case SvgColourType::Hsl:
-            if ((nullptr == pHsla) || (nHslaLength != 3)) throw SvgException(std::format("3 values are required for bgr with {}, not {}", SvgColourTypeToString(enumSvgColourType).c_str(), nHslaLength));
-            m_pHsla = std::move(pHsla);
-            m_nHslaLength = nHslaLength;
-            break;
-
         case SvgColourType::HslA:
-            if ((nullptr == pHsla) || (nHslaLength != 4)) throw SvgException(std::format("4 values are required for bgr with {}, not {}", SvgColourTypeToString(enumSvgColourType).c_str(), nHslaLength));
+            if (!pHsla.has_value()) throw SvgException(std::format("hsla values are required for hsl of type {}", SvgColourTypeToString(enumSvgColourType).c_str()));
             m_pHsla = std::move(pHsla);
-            m_nHslaLength = nHslaLength;
             break;
 
         // none is a legitimate value for SvgColour.  There's no data with it.
@@ -71,36 +60,27 @@ namespace Draw2d::Svg {
         }
     }
 
-    SvgColour::SvgColour(SvgColourType svgColourType, int nColourIndex, std::unique_ptr<uint8_t[]> pBgra, unsigned nBgraLength, std::unique_ptr<float[]> pHsla, unsigned nHslaLength, std::unique_ptr<SvgColour> pFallback):
-        SvgColour(svgColourType, nColourIndex, std::move(pBgra), nBgraLength, std::move(pHsla), nHslaLength)
+    SvgColour::SvgColour(SvgColourType svgColourType, int nColourIndex, std::optional<std::array<uint8_t,4>> pBgra, std::optional<std::array<float,4>> pHsla):
+        SvgColour(svgColourType, nColourIndex, std::move(pBgra), std::move(pHsla), nullptr)
     {
-        setFallback(std::move(pFallback));
     }
 
     void SvgColour::swap(SvgColour &copy) noexcept
     {
         std::swap(m_enumSvgColourType, copy.m_enumSvgColourType);
         std::swap(m_nColourIndex, copy.m_nColourIndex);
-        std::swap(m_nBgraLength, copy.m_nBgraLength);
         std::swap(m_pBgra, copy.m_pBgra);
-        std::swap(m_nHslaLength, copy.m_nHslaLength);
         std::swap(m_pHsla, copy.m_pHsla);
         std::swap(m_pFallback, copy.m_pFallback);
     }
 
     std::unique_ptr<SvgColour> SvgColour::clone() const
     {
-        std::unique_ptr<uint8_t[]> pBgra = nullptr;
-        std::unique_ptr<float[]> pHsla = nullptr;
-        if(m_pBgra) {
-            pBgra = std::make_unique<uint8_t[]>(m_nBgraLength);
-            for(unsigned i = 0; i < m_nBgraLength; i++) pBgra[i] = m_pBgra[i];
-        }
-        if(m_pHsla) {
-            pHsla = std::make_unique<float[]>(m_nHslaLength);
-            for(unsigned i = 0; i < m_nHslaLength; i++) pHsla[i] = m_pHsla[i];
-        }
-        return std::make_unique<SvgColour>(m_enumSvgColourType, m_nColourIndex, std::move(pBgra), m_nBgraLength, std::move(pHsla), m_nHslaLength);
+        std::optional<std::array<uint8_t,4>> pBgra = std::nullopt;
+        std::optional<std::array<float,4>> pHsla = std::nullopt;
+        if(m_pBgra.has_value()) pBgra = m_pBgra.value();
+        if(m_pHsla.has_value()) pHsla = m_pHsla.value();
+        return std::make_unique<SvgColour>(m_enumSvgColourType, m_nColourIndex, std::move(pBgra), std::move(pHsla));
     }
 
     Colour hslaToRgba(float fH, float fS, float fL, float fA)

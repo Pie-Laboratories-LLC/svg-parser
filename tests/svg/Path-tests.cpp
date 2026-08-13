@@ -25,7 +25,7 @@ namespace {
     // Same shear-matrix fixture as MatrixMath-tests.cpp, so results are
     // cross-checkable by hand against that file's hand-derived numbers.
     // xx=2, yx=0.5, xy=0.25, yy=3, dx=10, dy=20
-    constexpr float M[6] = { 2.0f, 0.5f, 0.25f, 3.0f, 10.0f, 20.0f };
+    constexpr std::optional<std::array<float,6>> M = { { 2.0f, 0.5f, 0.25f, 3.0f, 10.0f, 20.0f } };
 
     Path makePath(SvgDocument &doc, std::vector<float> points, std::vector<PathMove> moves) {
         SvgPathParams params{ { doc }, std::move(points), std::move(moves) };
@@ -33,10 +33,11 @@ namespace {
     }
 }
 
-TEST_CASE("Path::getX (HorizontalLineTo overload): pulls x from points, y from supplied value", "[svg-path][regression]") {
+TEST_CASE("Path::getX (HorizontalLineTo overload): pulls x from points, y from supplied value", "[svg-path][regression][xxx]") {
     SvgDocument doc {};
     Path path = makePath(doc, { 0.0f, 0.0f, 9.0f }, { PathMove::MoveTo, PathMove::HorizontalLineTo });
 
+    REQUIRE(M.has_value());
     REQUIRE( path.getX(2, 7.0f, std::nullopt, std::nullopt, M) == Catch::Approx(29.75f) );
 }
 
@@ -44,7 +45,7 @@ TEST_CASE("Path::getX (HorizontalLineTo overload): nullptr matrix returns raw x,
     SvgDocument doc {};
     Path path = makePath(doc, { 0.0f, 0.0f, 9.0f }, { PathMove::MoveTo, PathMove::HorizontalLineTo });
 
-    REQUIRE( path.getX(2, 7.0f, std::nullopt, std::nullopt, nullptr) == Catch::Approx(9.0f) );
+    REQUIRE( path.getX(2, 7.0f, std::nullopt, std::nullopt, std::nullopt) == Catch::Approx(9.0f) );
 }
 
 TEST_CASE("Path::getY (VerticalLineTo overload): pulls y from points, x from supplied value", "[svg-path][regression]") {
@@ -58,7 +59,7 @@ TEST_CASE("Path::getY (VerticalLineTo overload): nullptr matrix returns raw y, n
     SvgDocument doc {};
     Path path = makePath(doc, { 0.0f, 0.0f, 11.0f }, { PathMove::MoveTo, PathMove::VerticalLineTo });
 
-    REQUIRE( path.getY(2, 3.0f, std::nullopt, std::nullopt, nullptr) == Catch::Approx(11.0f) );
+    REQUIRE( path.getY(2, 3.0f, std::nullopt, std::nullopt, std::nullopt) == Catch::Approx(11.0f) );
 }
 
 TEST_CASE("Path: throws if first path move is not MoveTo", "[svg-path][regression]") {

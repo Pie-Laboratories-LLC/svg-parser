@@ -20,7 +20,7 @@
 #include "svg/SvgParser.hpp"
 
 #ifndef DOMPARSER_DOT_HPP
-    #include "xml/DomParser.hpp"
+    #include "xml/DomParserBuilder.hpp"
 #endif
 #ifndef SCOPEEXIT_DOT_HPP
     #include "core/ScopeExit.hpp"
@@ -76,7 +76,21 @@
 #ifndef DRAW2D_SVG_LINEJOIN_DOT_HPP
     #include "svg/LineJoin.hpp"
 #endif
-#include "svg/SvgDParser.hpp"
+#ifndef SVG_SVGDPARSER_DOT_HPP
+    #include "svg/SvgDParser.hpp"
+#endif
+#ifndef XML_DOMPARSERBUILDER_DOT_HPP
+    #include "xml/DomParserBuilder.hpp"
+#endif
+#ifndef XML_IDOMPARSER_DOT_HPP
+    #include "xml/IDomParser.hpp"
+#endif
+#ifndef XML_IDOMDOCUMENT_DOT_HPP
+    #include "xml/IDomDocument.hpp"
+#endif
+#ifndef XML_IDOMENTITY_DOT_HPP
+    #include "xml/IDomEntity.hpp"
+#endif
 
 namespace Draw2d::Svg {
 
@@ -96,26 +110,22 @@ namespace Draw2d::Svg {
                                                  ,bool bWithNamespace
                                                  ,bool bWithValidation)
     {
-        Xml::DomParser domParser { };
-        // NOTE - parse with schema and namespaces off.  We (er, claude and I) fear that crapulous tools out
-        //  there will produce svgs that use xlink:href on use, for example, but then never declare the
-        //  namespace.  Separate worry: they do specify a namespace but call it something other than "xlink,"
-        //  like "fred:href".  There's a unit test that covers this, it will fail.
-        DOMDocument *pSvg = domParser.Parse(cstrSvgText, bWithNamespace, bWithValidation);
-        Core::ScopeExit scopeExit([pSvg]() { if(pSvg) pSvg->release(); });
-        DOMElement *pRootElement = pSvg->getDocumentElement();
+        std::unique_ptr<Xml::IDomParser> domParser = Xml::DomParserBuilder::makeDomParser();
+
+        std::unique_ptr<Xml::IDomDocument> domDocument = domParser->parse(cstrSvgText, bWithNamespace, bWithValidation);
+        std::unique_ptr<Xml::IDomEntity> domEntity = domDocument->getRootEntity();
 
         std::unique_ptr<SvgDocument> pSvgDocument = std::make_unique<SvgDocument>();
         SvgParseState svgParseState {
             .svgDocument = *pSvgDocument.get(),
-            .pSvg = pSvg,
+            .pRootEntity = std::move(domDocument),
             .bWithNamespace = bWithNamespace,
             .bWithValidation = bWithValidation
         };
         SvgParserContext svgParserContext { };
         svgParserContext.setViewportWidth(fViewportWidth);
         svgParserContext.setViewportHeight(fViewportWidth);
-        (void) __parseSvgElement(svgParseState, pRootElement, svgParserContext);
+        (void) __parseSvgElement(svgParseState, domEntity.get(), svgParserContext);
 
 //        __resolveUses(svgParseState);
 
@@ -123,7 +133,7 @@ namespace Draw2d::Svg {
     }
 
     std::regex SvgParser::SvgRgbRegex { R"xxx(^\s*rgba?\s*\(\s*([+-]?\d*\.?\d+)\s*(%?)\s*,?\s*([+-]?\d*\.?\d+)\s*\2\s*,?\s*([+-]?\d*\.?\d+)\s*\2\s*[,/]?\s*(?:([+-]?\d*\.?\d+)\s*(%?))?\)\s*$)xxx" };
-    std::regex SvgParser::SvgHslRegex { R"xxx(^\s*hsla?\s*\(\s*([+-]?\d*\.?\d+)\s*(deg|grad|rad|turn)?\s*,?\s*([+-]?\d*\.?\d+)%?\s*,?\s*([+-]?\d*\.?\d+)%?\s*(?:[,/]\s*([+-]?\d*\.?\d+)(%?)\s*)?\)\s*$)xxx" };
+    std::regex SvgParser::SvgHslRegex { R"xxx(^\s*hsla?\s*\(\s*([+-]?\d*\.?\d+)\s*(deg|grad|rad|turn)?\s*,?\s*([+-]?\d*\.?\d+)\s*(%?)\s*,?\s*([+-]?\d*\.?\d+)\s*(%?)\s*(?:[,/]\s*([+-]?\d*\.?\d+)(%?)\s*)?\)\s*$)xxx" };
     std::regex SvgParser::UrlRegex { R"xxx(url\(#([^)]+)\))xxx"};
     std::regex SvgParser::VarRegex { R"xxx(^\s*var\s*\()xxx"};
     std::regex SvgParser::HexColourRegex { R"xxx(^#([0-9a-f]{6,8})$)xxx", std::regex::icase };
@@ -135,15 +145,15 @@ namespace Draw2d::Svg {
     std::regex SvgParser::DimensionRegex { R"xxx(([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)\s*(%|px|pt|pc|cm|mm|in|q|em|ex|ch|rem|vw|vh|vmin|vmax)?)xxx", std::regex::icase };
 
 
-    const Svg *SvgParser::__parseSvgElement(SvgParseState &svgParseState, xc::DOMElement *pSvgElement, SvgParserContext svgParserContext)
+    const Svg *SvgParser::__parseSvgElement(SvgParseState &svgParseState, Xml::IDomEntity *pSvgElement, SvgParserContext svgParserContext)
     {
         SvgSvgParams svgSvgParams { SvgContainerParams { SvgEntityParams { .svgDocument = svgParseState.svgDocument } } };
 
         __updateInheritedProperties(svgParseState, pSvgElement, svgParserContext);
 
-        // paranoia will destroya.  TODO - we don't validate any other tag names, we assume we're
-        //  being called correctly
-        Core::String strTagName = Xml::String(pSvgElement->getTagName()).getTranscoded();
+        // paranoia will destroya.  TODO - we don't validate any other tag names like this
+        //  the other methods could profit from this
+        Core::String strTagName = pSvgElement->getTagName();
         if(strTagName != SVG_NAME) throw SvgException("expected an <svg .../> tag, got {}", strTagName.c_str());
 
         auto [ x, y, width, height ] = __parseDimensions(svgParseState,pSvgElement);
@@ -151,26 +161,23 @@ namespace Draw2d::Svg {
         svgSvgParams.svgDimensionedParams.y = y;
         svgSvgParams.svgDimensionedParams.width = width;
         svgSvgParams.svgDimensionedParams.height = height;
-        Core::String strViewboxAttribute = Xml::DomParser::getAttributeIfExists(pSvgElement, VIEWBOX_ATTRIBUTE);
-        if(!Core::String::IsWhitespace(strViewboxAttribute)) {
-            // TODO
-            // a little wastefull to call __parsePoints on this, but I'm too lazy to refactor __parsePoints
+        Core::String strViewboxAttribute { };
+        if(pSvgElement->tryGetAttribute(VIEWBOX_ATTRIBUTE, strViewboxAttribute)) {
             size_t nPos = 0;
-            auto [ nNumberPoints,pViewBox ] = __parsePoints(strViewboxAttribute, nPos);
-            if(nNumberPoints != 4) throw SvgException("Invalid viewbox {}, expected 4 points, got {}", strViewboxAttribute.c_str(), nNumberPoints);
-            
+            auto viewBox = __parsePoints(strViewboxAttribute, nPos, 4, true);
+
             svgSvgParams.viewbox = Viewbox {
-                .x = pViewBox[0],
-                .y = pViewBox[1],
-                .width = pViewBox[2],
-                .height = pViewBox[3]
+                .x = viewBox[0],
+                .y = viewBox[1],
+                .width = viewBox[2],
+                .height = viewBox[3]
             };
-            // viewBox width/height trumps current viewport width/height, even if supplied by user.
-            svgParserContext.setViewportWidth(pViewBox[2]);
-            svgParserContext.setViewportHeight(pViewBox[2]);
+            // viewBox width/height trumps current viewport width/height, even when supplied by user.
+            svgParserContext.setViewportWidth(viewBox[2]);
+            svgParserContext.setViewportHeight(viewBox[2]);
         }
-        Core::String strPreserveAspectRatio = Xml::DomParser::getAttributeIfExists(pSvgElement, PRESERVEASPECTRATIO_ATTRIBUTE);
-        if(!Core::String::IsEmpty(strPreserveAspectRatio)) {
+        Core::String strPreserveAspectRatio { };
+        if(pSvgElement->tryGetAttribute(PRESERVEASPECTRATIO_ATTRIBUTE, strPreserveAspectRatio)) {
             std::vector<Core::String> parts = strPreserveAspectRatio.regex_split(Core::String::WsRegex);
             if(parts.size() != 1 && parts.size() != 2) throw SvgException("Invalid preserveAspectRatio {}. expected one or two distinct strings, got {}",strPreserveAspectRatio.c_str(), parts.size());
             svgSvgParams.preserveAspectRatio = ParsePreserveAspectRatio(parts[0]);
@@ -199,16 +206,14 @@ namespace Draw2d::Svg {
         return toReturn;
     }
 
-    void SvgParser::__parseGlobalScope(SvgParseState &svgParseState, xc::DOMElement *pParentElement, SvgParserContext svgParserContext)
+    void SvgParser::__parseGlobalScope(SvgParseState &svgParseState, Xml::IDomEntity *pParentElement, SvgParserContext svgParserContext)
     {
         __updateInheritedProperties(svgParseState, pParentElement, svgParserContext);
 
-        for (DOMNode *pChildNode = pParentElement->getFirstChild(); pChildNode != nullptr; pChildNode = pChildNode->getNextSibling())
+        for(std::unique_ptr<Xml::IDomEntity> pChildNode = std::move(pParentElement->getFirstChild());
+            pChildNode; pChildNode = pChildNode->getNextSibling())
         {
-            if (pChildNode->getNodeType() != DOMNode::ELEMENT_NODE) continue;
-
-            DOMElement *pChildElement = static_cast<DOMElement*>(pChildNode);
-            Core::String strName = Xml::String(pChildElement->getTagName()).getTranscoded();
+            Core::String strName = pChildNode->getTagName();
 
             if(strName == DEFINITIONS_NAME) {
                 // render may be false if we have <defs...><defs ...>.
@@ -220,34 +225,25 @@ namespace Draw2d::Svg {
                 Core::ScopeExit scopeExit([&svgParserContext,bSaveRender] () {
                     svgParserContext.setRender(bSaveRender);
                 });
-                __parseGlobalScope(svgParseState, pChildElement, svgParserContext);
-                continue;
+                __parseGlobalScope(svgParseState, pChildNode.get(), svgParserContext);
             }
-
-            if(strName == GROUP_NAME || strName == PATH_NAME || strName == USE_NAME) {
-                (void) __parseSvgEntity(svgParseState, pChildElement, svgParserContext);
-                continue;
+            else if(strName == GROUP_NAME || strName == PATH_NAME || strName == USE_NAME) {
+                (void) __parseSvgEntity(svgParseState, pChildNode.get(), svgParserContext);
             }
-
-            if(strName == LINEAR_GRADIENT_NAME || strName == RADIAL_GRADIENT_NAME) {
-                (void) __parseGradient(svgParseState, pChildElement);
-                continue;
+            else if(strName == LINEAR_GRADIENT_NAME || strName == RADIAL_GRADIENT_NAME) {
+                (void) __parseGradient(svgParseState, pChildNode.get());
             }
-
-            if(strName == STYLE_NAME) {
-                __snagStyle(svgParseState, pChildElement);
-                continue;
+            else if(strName == STYLE_NAME) {
+                __snagStyle(svgParseState, pChildNode.get());
             }
-
-            if(strName == SVG_NAME) {
-                (void) __parseSvgElement(svgParseState, pChildElement, svgParserContext);
+            else if(strName == SVG_NAME) {
+                (void) __parseSvgElement(svgParseState, pChildNode.get(), svgParserContext);
             }
-
-            throw SvgException("Unrecognized element {} ", strName.c_str());
+            else throw SvgException("Unrecognized element {} ", strName.c_str());
         }
     }
 
-    std::tuple<std::optional<Dimension>,std::optional<Dimension>,std::optional<Dimension>,std::optional<Dimension>> SvgParser::__parseDimensions(SvgParseState &svgParseState, xc::DOMElement *pChildElement)
+    std::tuple<std::optional<Dimension>,std::optional<Dimension>,std::optional<Dimension>,std::optional<Dimension>> SvgParser::__parseDimensions(SvgParseState &svgParseState, Xml::IDomEntity *pChildElement)
     {
         std::optional<Dimension> x = {};
         std::optional<Dimension> y = {};
@@ -259,18 +255,20 @@ namespace Draw2d::Svg {
         height = __parseDimension(pChildElement, HEIGHT_ATTRIBUTE);
 
         return { x, y, width, height };
-    } // std::tuple<std::optional<float>,std::optional<float>,std::optional<float>,std::optional<float>> SvgParser::__parseDimensions(SvgParseState &, xc::DOMElement *)
+    } // std::tuple<std::optional<float>,std::optional<float>,std::optional<float>,std::optional<float>> SvgParser::__parseDimensions(SvgParseState &, Xml::IDomEntity *)
 
 
-    std::optional<Dimension> SvgParser::__parseDimension(xc::DOMElement *pChildElement, const Core::String &cstrAttributeName)
+    std::optional<Dimension> SvgParser::__parseDimension(Xml::IDomEntity *pChildElement, const Core::String &cstrAttributeName)
     {
         std::optional<Dimension> toReturn = std::nullopt;
         std::cmatch dimensionMatch;
 
-        Core::String strAttribute = Xml::DomParser::getAttributeIfExists(pChildElement, cstrAttributeName);
-        if (Core::String::IsWhitespace(strAttribute)) return toReturn;
-        if(strAttribute.trim() == AUTO_VALUE) return toReturn;
-        if(std::regex_search(strAttribute.c_str(), dimensionMatch, SvgParser::DimensionRegex)) {
+        Core::String strAttributeValue;
+        // disconcerting that <rect width="auto"...> and <rect width=""...> are equivalent in svg
+        if(!pChildElement->tryGetAttribute(cstrAttributeName, strAttributeValue)
+        || strAttributeValue.trim() == AUTO_VALUE) return toReturn;
+
+        if(std::regex_search(strAttributeValue.c_str(), dimensionMatch, SvgParser::DimensionRegex)) {
             toReturn = Dimension {
                 .enumUnits = dimensionMatch[2].str().length() ? ParseDimensionUnits(dimensionMatch[2].str()) : DimensionUnits::Px,
                 .fValue = Core::ParseFloat(dimensionMatch[1].str())
@@ -280,29 +278,22 @@ namespace Draw2d::Svg {
         return toReturn;
     }
 
-    std::optional<Dimension> SvgParser::__parseAutoDimension(xc::DOMElement *pChildElement, const Core::String &cstrAttributeName)
-    {
-        Core::String strAttribute = Xml::DomParser::getAttributeIfExists(pChildElement, cstrAttributeName);
-        if(strAttribute == AUTO_VALUE) return std::nullopt;
-        return __parseDimension(pChildElement, cstrAttributeName);
-    }
-
-    SvgPathLengthableParams SvgParser::__checkPathLengthable(SvgParseState &svgParseState, xc::DOMElement *pChildElement, SvgParserContext svgParserContext)
+    SvgPathLengthableParams SvgParser::__checkPathLengthable(SvgParseState &svgParseState, Xml::IDomEntity *pChildElement, SvgParserContext svgParserContext)
     {
         SvgPathLengthableParams svgPathLengthableParams { };
-        Core::String strPathLength = Xml::DomParser::getAttributeIfExists(pChildElement, PATHLENGTH_ATTRIBUTE);
-        if(!Core::String::IsWhitespace(strPathLength)) svgPathLengthableParams.pathLength = Core::ParseFloat(strPathLength);
+        Core::String strPathLength { };
+        if(pChildElement->tryGetAttribute(PATHLENGTH_ATTRIBUTE,strPathLength)) svgPathLengthableParams.pathLength = Core::ParseFloat(strPathLength);
         return svgPathLengthableParams;
     }
 
-    void SvgParser::__snagStyle(SvgParseState &svgParseState, xc::DOMElement *pStyleElement)
+    void SvgParser::__snagStyle(SvgParseState &svgParseState, Xml::IDomEntity *pStyleElement)
     {
         Core::String strTagName = Xml::String(pStyleElement->getTagName()).getTranscoded();
         if(strTagName != SVG_NAME) throw SvgException("expected an <svg .../> tag, got {}", strTagName.c_str());
-        svgParseState.svgDocument.appendStyle(Xml::String(pStyleElement->getTextContent()).getTranscoded());
+        svgParseState.svgDocument.appendStyle(pStyleElement->getTextContent());
     }
 
-    const SvgEntity *SvgParser::__parseSvgEntity(SvgParseState &svgParseState, xc::DOMElement *pChildElement, SvgParserContext svgParserContext)
+    const SvgEntity *SvgParser::__parseSvgEntity(SvgParseState &svgParseState, Xml::IDomEntity *pChildElement, SvgParserContext svgParserContext)
     {
         const SvgEntity *cpSvgEntity = nullptr;
 
@@ -312,7 +303,7 @@ namespace Draw2d::Svg {
         //  __updateInheritedProperties here applies the transform twice, which is generally no
         //  bueno; I blame designers for not ensuring their matrices are idempotent.
 
-        Core::String strChildElementName = Xml::String(pChildElement->getNodeName()).getTranscoded();
+        Core::String strChildElementName = pChildElement->getTagName();
         
         if(strChildElementName == USE_NAME) {
             cpSvgEntity = __parseUse(svgParseState, pChildElement, svgParserContext);
@@ -337,29 +328,31 @@ namespace Draw2d::Svg {
         {
             cpSvgEntity = __parseEllipse(svgParseState, pChildElement, svgParserContext);
         }
+        else if(m_callback) m_callback(SvgParserStatus::Warning, std::format("Unrecognized tag {}", strChildElementName));
 
         return cpSvgEntity;
-    } // const SvgEntity *SvgParser::__parseSvgEntity(SvgParseState &, xc::DOMElement *)
+    } // const SvgEntity *SvgParser::__parseSvgEntity(SvgParseState &, Xml::IDomEntity *)
 
     template <typename F>
-    void SvgParser::__applyIfSet(xc::DOMElement *pElement, const Core::String &cstrAttributeName, F &&apply)
+    void SvgParser::__applyIfSet(Xml::IDomEntity *pElement, const Core::String &cstrAttributeName, F &&apply)
     {
-        Core::String strValue = Xml::DomParser::getAttributeIfExists(pElement, cstrAttributeName);
-        if(Core::String::IsWhitespace(strValue) || strValue == INHERIT_VALUE) return;
+        Core::String strValue { };
+        if(!pElement->tryGetAttribute(cstrAttributeName,strValue)
+        || strValue == INHERIT_VALUE) return;
         apply(strValue);
     }
 
-    void SvgParser::__updateInheritedProperties(SvgParseState &svgParseState, xc::DOMElement *pElement, SvgParserContext &svgParserContext)
+    void SvgParser::__updateInheritedProperties(SvgParseState &svgParseState, Xml::IDomEntity *pElement, SvgParserContext &svgParserContext)
     {
         // great suggestion from claude.  Most of these properties can take the value "inherit,"
         //  so we explicitly check for that and ignore any inherit values.  There are a few exceptions
         __applyIfSet(pElement, COLOR_ATTRIBUTE, [&](auto s) {svgParserContext.setColour(__parseColour(svgParseState, s)); });
 
-        std::unique_ptr<float[]> pMatrix = nullptr;
-        Core::String transformAttribute = Xml::DomParser::getAttributeIfExists(pElement, TRANSFORM_ATTRIBUTE);
-        if (!Core::String::IsWhitespace(transformAttribute)) {
-            pMatrix = __parseTransform(transformAttribute,"transform");
-            svgParserContext.multiplyRight(pMatrix.get());
+        Core::String transformAttribute { };
+        if (pElement->tryGetAttribute(TRANSFORM_ATTRIBUTE,transformAttribute)) {
+            std::array<float,6> matrix { };
+            matrix = __parseTransform(transformAttribute,"transform");
+            svgParserContext.multiplyRight(matrix);
         }
 
         __applyIfSet(pElement, FILL_ATTRIBUTE, [&](auto s) {svgParserContext.setFillColour(__parsePaint(svgParseState, s)); });
@@ -382,8 +375,8 @@ namespace Draw2d::Svg {
 
         // dash array is a list of numbers that controls when the dash is on and off
         std::vector<float> dashArray {};
-        Core::String strStrokeDashArray = Xml::DomParser::getAttributeIfExists(pElement, STROKE_DASHARRAY_ATTRIBUTE);
-        if(!Core::String::IsWhitespace(strStrokeDashArray)
+        Core::String strStrokeDashArray { };
+        if(pElement->tryGetAttribute(STROKE_DASHARRAY_ATTRIBUTE, strStrokeDashArray)
         && strStrokeDashArray != INHERIT_VALUE) {
             // subtle - none should set an empty array.
             if(strStrokeDashArray != NONE_VALUE) {
@@ -403,65 +396,68 @@ namespace Draw2d::Svg {
         __applyIfSet(pElement, STROKE_DASHOFFSET_ATTRIBUTE, [&](auto s) { svgParserContext.setDashOffset(Core::ParseFloat(s)); });
     }
 
-    void SvgParser::__parseCommonProperties(SvgParseState &svgParseState, xc::DOMElement *pRenderedElement, SvgEntityParams &params, const SvgParserContext &svgParserContext)
+    void SvgParser::__parseCommonProperties(SvgParseState &svgParseState, Xml::IDomEntity *pRenderedElement, SvgEntityParams &params, const SvgParserContext &svgParserContext)
     {
-        Core::String strId = Xml::DomParser::getAttributeIfExists(pRenderedElement, ID_ATTRIBUTE);
+        Core::String strId { };
+        (void) pRenderedElement->tryGetAttribute(ID_ATTRIBUTE,strId);
         params.id = strId;
 
         params.render = svgParserContext.getRender();
 
-        if(Xml::DomParser::hasAttribute(pRenderedElement, TRANSFORM_ATTRIBUTE)) {
-            params.pMatrix = duplicateMatrix6(svgParserContext.getMatrix());
+        if(pRenderedElement->hasAttribute(TRANSFORM_ATTRIBUTE)) {
+            params.matrix = duplicateMatrix6(svgParserContext.getMatrix());
         }
 
-        if(Xml::DomParser::hasAttribute(pRenderedElement, FILL_ATTRIBUTE)) {
+        if(pRenderedElement->hasAttribute(FILL_ATTRIBUTE)) {
             params.fillColour = svgParserContext.getFillColour();
         }
 
-        if(Xml::DomParser::hasAttribute(pRenderedElement, FILL_RULE_ATTRIBUTE)) {
+        if(pRenderedElement->hasAttribute(FILL_RULE_ATTRIBUTE)) {
             params.fillRule = svgParserContext.getFillRule();
         }
 
-        if(Xml::DomParser::hasAttribute(pRenderedElement, FILL_OPACITY_ATTRIBUTE)) {
+        if(pRenderedElement->hasAttribute(FILL_OPACITY_ATTRIBUTE)) {
             params.fillOpacity = svgParserContext.getFillOpacity();
         }
 
-        if(Xml::DomParser::hasAttribute(pRenderedElement, STROKE_ATTRIBUTE)) {
+        if(pRenderedElement->hasAttribute(STROKE_ATTRIBUTE)) {
             params.strokeColour = svgParserContext.getStrokeColour();
         }
 
-        if(Xml::DomParser::hasAttribute(pRenderedElement, STROKE_OPACITY_ATTRIBUTE)) {
+        if(pRenderedElement->hasAttribute(STROKE_OPACITY_ATTRIBUTE)) {
             params.strokeOpacity = svgParserContext.getStrokeOpacity();
         }
 
-        if(Xml::DomParser::hasAttribute(pRenderedElement, STROKE_WIDTH_ATTRIBUTE)) {
+        if(pRenderedElement->hasAttribute(STROKE_WIDTH_ATTRIBUTE)) {
             params.strokeWidth = svgParserContext.getStrokeWidth();
         }
 
-        if(Xml::DomParser::hasAttribute(pRenderedElement, STROKE_LINECAP_ATTRIBUTE)) {
+        if(pRenderedElement->hasAttribute(STROKE_LINECAP_ATTRIBUTE)) {
             params.lineCap = svgParserContext.getLineCap();
         }
 
-        if(Xml::DomParser::hasAttribute(pRenderedElement, STROKE_LINEJOIN_ATTRIBUTE)) {
+        if(pRenderedElement->hasAttribute(STROKE_LINEJOIN_ATTRIBUTE)) {
             params.lineJoin = svgParserContext.getLineJoin();
         }
 
-        if(Xml::DomParser::hasAttribute(pRenderedElement, STROKE_MITRELIMIT_ATTRIBUTE)) {
+        if(pRenderedElement->hasAttribute(STROKE_MITRELIMIT_ATTRIBUTE)) {
             params.miterLimit = svgParserContext.getStrokeMiterLimit();
         }
 
-        if(Xml::DomParser::hasAttribute(pRenderedElement, STROKE_DASHARRAY_ATTRIBUTE)) {
+        if(pRenderedElement->hasAttribute(STROKE_DASHARRAY_ATTRIBUTE)) {
             params.dashArray = svgParserContext.getDashArray();
         }
 
-        if(Xml::DomParser::hasAttribute(pRenderedElement, STROKE_DASHOFFSET_ATTRIBUTE)) {
+        if(pRenderedElement->hasAttribute(STROKE_DASHOFFSET_ATTRIBUTE)) {
             params.dashOffset = svgParserContext.getDashOffset();
         }
 
-        Core::String strClass = Xml::DomParser::getAttributeIfExists(pRenderedElement, CLASS_ATTRIBUTE);
+        Core::String strClass { };
+        pRenderedElement->tryGetAttribute(CLASS_ATTRIBUTE, strClass);
         params.cssClass = strClass;
 
-        Core::String strStyle = Xml::DomParser::getAttributeIfExists(pRenderedElement, STYLE_ATTRIBUTE);
+        Core::String strStyle { };
+        pRenderedElement->tryGetAttribute(STYLE_ATTRIBUTE, strStyle);
         params.cssStyle = strStyle;
     }
 
@@ -472,7 +468,7 @@ namespace Draw2d::Svg {
         }
     }
 
-    const Group *SvgParser::__parseGroup(SvgParseState &svgParseState, DOMElement *pGroupElement, SvgParserContext svgParserContext)
+    const Group *SvgParser::__parseGroup(SvgParseState &svgParseState, Xml::IDomEntity *pGroupElement, SvgParserContext svgParserContext)
     {
         SvgGroupParams svgGroupParams { SvgContainerParams { SvgEntityParams { .svgDocument = svgParseState.svgDocument } } };
 
@@ -480,9 +476,9 @@ namespace Draw2d::Svg {
         __parseCommonProperties(svgParseState, pGroupElement, svgGroupParams, svgParserContext);
 
         std::vector<const SvgEntity *> svgEntities { };
-        Core::String strOpacityAttribute = Xml::DomParser::getAttributeIfExists(pGroupElement, OPACITY_ATTRIBUTE);
         float fOpacity = 1.0f;
-        if (!Core::String::IsWhitespace(strOpacityAttribute)) fOpacity = Core::ParseFloat(strOpacityAttribute);
+        Core::String strOpacityAttribute { };
+        if (pGroupElement->tryGetAttribute(OPACITY_ATTRIBUTE, strOpacityAttribute)) fOpacity = Core::ParseFloat(strOpacityAttribute);
 
         svgGroupParams.fOpacity = fOpacity;
         std::unique_ptr<Group> pGroup = std::make_unique<Group>(std::move(svgGroupParams));
@@ -490,15 +486,12 @@ namespace Draw2d::Svg {
         __saveEntityToDocument(svgParseState, toReturn);
         svgParserContext.setChildWrangler(toReturn);
 
-        for (DOMNode *pChildNode = pGroupElement->getFirstChild(); pChildNode != nullptr; pChildNode = pChildNode->getNextSibling()) {
-            if (pChildNode->getNodeType() != DOMNode::ELEMENT_NODE) continue;
-
-            DOMElement *pChildElement = dynamic_cast<DOMElement *>(pChildNode);
-            if(pChildElement == nullptr) throw SvgException("Internal error.");
-
-            const SvgEntity *cpSvgEntity = __parseSvgEntity(svgParseState, pChildElement, svgParserContext);
+        for(std::unique_ptr<Xml::IDomEntity> pChildNode = std::move(pGroupElement->getFirstChild());
+            pChildNode; pChildNode = pChildNode->getNextSibling())
+        {
+            const SvgEntity *cpSvgEntity = __parseSvgEntity(svgParseState, pChildNode.get(), svgParserContext);
             if(!cpSvgEntity) {
-                Core::String strChildElementName = Xml::String(pChildElement->getNodeName()).getTranscoded();
+                Core::String strChildElementName = pChildNode->getTagName();
                 throw SvgException("Unrecognized child node {} of groupNode",strChildElementName.c_str());
             }
 
@@ -508,7 +501,7 @@ namespace Draw2d::Svg {
         return toReturn;
     } // const Group *SvgParser::__parseGroup(DOMDocument *, DOMElement *)
 
-    const Path *SvgParser::__parsePath(SvgParseState &svgParseState, DOMElement *pPathElement, const SvgParserContext &svgParserContextIn)
+    const Path *SvgParser::__parsePath(SvgParseState &svgParseState, Xml::IDomEntity *pPathElement, const SvgParserContext &svgParserContextIn)
     {
         SvgParserContext svgParserContext = svgParserContextIn;
 
@@ -517,8 +510,8 @@ namespace Draw2d::Svg {
         __updateInheritedProperties(svgParseState, pPathElement, svgParserContext);
         __parseCommonProperties(svgParseState, pPathElement, svgPathParams, svgParserContext);
 
-        Core::String strD = Xml::DomParser::getAttributeIfExists(pPathElement, D_ATTRIBUTE);
-        if (Core::String::IsWhitespace(strD)) throw SvgException("Missing d attribute on pathNode");
+        Core::String strD { };
+        if (!pPathElement->tryGetAttribute(D_ATTRIBUTE,strD)) throw SvgException("Missing d attribute on pathNode");
 
         SvgDParser svgDParser { };
         auto [ pathMoves, points ] = svgDParser.parseD(strD);
@@ -533,7 +526,7 @@ namespace Draw2d::Svg {
         return toReturn;
     } // const Path *SvgParser::__parsePath(DOMDocument *, DOMElement *)
 
-    const Use *SvgParser::__parseUse(SvgParseState &svgParseState, xc::DOMElement *pUseElement, SvgParserContext svgParserContext)
+    const Use *SvgParser::__parseUse(SvgParseState &svgParseState, Xml::IDomEntity *pUseElement, SvgParserContext svgParserContext)
     {
         SvgUseParams svgUseParams { SvgContainerParams { SvgEntityParams { .svgDocument = svgParseState.svgDocument } } };
 
@@ -563,7 +556,7 @@ namespace Draw2d::Svg {
         strHref.trim_start_in_place('#');
 
         // we want to "instance" the use.  Look up the dom node this use node is referencing
-        DOMElement *pUsedElement = this->__getElementById(svgParseState.pSvg, Xml::String(strHref).c_str());
+        std::shared_ptr<Xml::IDomEntity> pUsedElement = svgParseState.pRootEntity->getElementById(Xml::String(strHref).c_str());
         if (pUsedElement != nullptr) {
             // first thing, remember we've tracked this href; if it doesn't insert, it
             //  means we have visited that node before whilst resolving a use and it is
@@ -585,13 +578,13 @@ namespace Draw2d::Svg {
 
             // we don't care about the result here, Because we sat use as the
             //  child wrangler, the child entity will belong to the use
-            (void)__parseSvgEntity(svgParseState, pUsedElement, svgParserContext);
+            (void)__parseSvgEntity(svgParseState, pUsedElement.get(), svgParserContext);
         }
 
         return toReturn;
-    } // const Use *SvgParser::__parseUse(SvgParseState &, xc::DOMElement *)
+    } // const Use *SvgParser::__parseUse(SvgParseState &, Xml::IDomEntity *)
 
-    const Rect *SvgParser::__parseRect(SvgParseState &svgParseState, xc::DOMElement *pRectElement, SvgParserContext svgParserContext)
+    const Rect *SvgParser::__parseRect(SvgParseState &svgParseState, Xml::IDomEntity *pRectElement, SvgParserContext svgParserContext)
     {
         SvgRectParams svgRectParams { SvgEntityParams { .svgDocument = svgParseState.svgDocument } };
 
@@ -616,13 +609,13 @@ namespace Draw2d::Svg {
         return toReturn;
     }
 
-    const Ellipse *SvgParser::__parseEllipse(SvgParseState &svgParseState, xc::DOMElement *pEllipseElement, SvgParserContext svgParserContext)
+    const Ellipse *SvgParser::__parseEllipse(SvgParseState &svgParseState, Xml::IDomEntity *pEllipseElement, SvgParserContext svgParserContext)
     {
         SvgEllipseParams svgEllipseParams { SvgEntityParams { .svgDocument = svgParseState.svgDocument } };
         svgEllipseParams.cx = __parseDimension(pEllipseElement, CX_ATTRIBUTE);
         svgEllipseParams.cy = __parseDimension(pEllipseElement, CY_ATTRIBUTE);
-        svgEllipseParams.rx = __parseAutoDimension(pEllipseElement, RX_ATTRIBUTE);
-        svgEllipseParams.ry = __parseAutoDimension(pEllipseElement, RY_ATTRIBUTE);
+        svgEllipseParams.rx = __parseDimension(pEllipseElement, RX_ATTRIBUTE);
+        svgEllipseParams.ry = __parseDimension(pEllipseElement, RY_ATTRIBUTE);
         svgEllipseParams.svgPathLengthableParams = __checkPathLengthable(svgParseState, pEllipseElement,svgParserContext);
 
         __updateInheritedProperties(svgParseState, pEllipseElement, svgParserContext);
@@ -634,12 +627,12 @@ namespace Draw2d::Svg {
         return toReturn;
     }
 
-    const Circle *SvgParser::__parseCircle(SvgParseState &svgParseState, xc::DOMElement *pCircleElement, SvgParserContext svgParserContext)
+    const Circle *SvgParser::__parseCircle(SvgParseState &svgParseState, Xml::IDomEntity *pCircleElement, SvgParserContext svgParserContext)
     {
         SvgCircleParams svgCircleParams { SvgEntityParams { .svgDocument = svgParseState.svgDocument } };
         svgCircleParams.cx = __parseDimension(pCircleElement, CX_ATTRIBUTE);
         svgCircleParams.cy = __parseDimension(pCircleElement, CY_ATTRIBUTE);
-        svgCircleParams.r = __parseAutoDimension(pCircleElement, R_ATTRIBUTE);
+        svgCircleParams.r = __parseDimension(pCircleElement, R_ATTRIBUTE);
         svgCircleParams.svgPathLengthableParams = __checkPathLengthable(svgParseState, pCircleElement,svgParserContext);
 
         __updateInheritedProperties(svgParseState, pCircleElement, svgParserContext);
@@ -651,31 +644,31 @@ namespace Draw2d::Svg {
         return toReturn;
     }
 
-    Core::String SvgParser::__retrieveHref(SvgParseState &svgParseState, xc::DOMElement *pElement)
+    Core::String SvgParser::__retrieveHref(SvgParseState &svgParseState, Xml::IDomEntity *pElement)
     {
         // spec drops http://www.w3.org/1999/xlink namespace on href but still supports it.
         // href > xlink:href but fall back to xlink::href if need be
-        Core::String strHref = Xml::DomParser::getAttributeIfExists(pElement, HREF_ATTRIBUTE);
+        Core::String strHref { };
+        (void) pElement-> tryGetAttribute(HREF_ATTRIBUTE, strHref);
         Core::String strXlinkHref;
         if(svgParseState.bWithNamespace) {
-            strXlinkHref = Xml::DomParser::getAttributeIfExistsNS(pElement, XLINK_NAMESPACE, XLINK_HREF_ATTRIBUTE);
+            (void) pElement->tryGetAttributeNS(HREF_ATTRIBUTE, XLINK_NAMESPACE, strXlinkHref);
         }
         else {
-            strXlinkHref = Xml::DomParser::getAttributeIfExists(pElement, XLINK_HREF_ATTRIBUTE);
+            (void) pElement->tryGetAttribute(XLINK_HREF_ATTRIBUTE, strXlinkHref);
         }
         if(!Core::String::IsWhitespace(strHref)) {
             if(!Core::String::IsWhitespace(strXlinkHref) && strHref != strXlinkHref && m_callback) {
-                m_callback(SvgParserStatus::Warning, std::format("Node has both xlink:href `{}' and href `{}' attributes that disagree", strXlinkHref.c_str(), strHref.c_str()));
+                m_callback(SvgParserStatus::Warning, std::format("Node has both xlink:href `{}' and href `{}' attributes that disagree; per the standard, `href' wins.", strXlinkHref.c_str(), strHref.c_str()));
             }
             return strHref;
         }
         return strXlinkHref;
     }
 
-    std::pair<unsigned,std::unique_ptr<float[]>> SvgParser::__parsePoints(const Core::String &d, size_t &pos)
+    std::vector<float> SvgParser::__parsePoints(const Core::String &d, size_t &pos, size_t nMaximumPoints, bool bExactMaximum)
     {
-        std::unique_ptr<float[]> pPoints = std::make_unique<float[]>(6);
-        unsigned nPointCount = 0;
+        std::vector<float> points { };
         unsigned nextIndex = pos;
         while (nextIndex < d.length())
         {
@@ -699,20 +692,15 @@ namespace Draw2d::Svg {
                 nextIndex++;
             }
             if (pos == nextIndex) throw SvgException("LogicError {}, {} in `{}`",pos, nextIndex, d.c_str());
-            if(nPointCount == 6) throw SvgException("Too many points supplied in matrix (should be <= 6): {}",d.c_str());
-            pPoints[nPointCount] = Core::ParseFloat(d, pos, nextIndex - pos);
-            nPointCount++;
+            points.push_back(Core::ParseFloat(d, pos, nextIndex - pos));
+            if(nMaximumPoints && points.size() > nMaximumPoints) throw SvgException("Too many points supplied (maximum <= {}): {}",d, nMaximumPoints);
 
             pos = nextIndex;
         }
 
-        // little confused here.  Previously I was using a fixed-size (6) member variable.
-        // confusion clearer: originally this was just used for parsing matrix() but was
-        //  extended to properly support all the fields of transform="...".  We let the
-        //  caller determine if the number of points is valid.  (we do still verify there
-        //  are no more than 6 points above, in the loop).
-//        if ((nPointCount == 0) || (nPointCount % 2 == 1)) throw SvgException(std::format("Illegal number of points {}",nPointCount));
-        return { nPointCount, std::move(pPoints) };
+        if(bExactMaximum && nMaximumPoints && points.size() != nMaximumPoints) throw SvgException("Expected exactly {} points; wound up with {}", nMaximumPoints, points.size());
+
+        return points;
     }
 
     SvgPaint SvgParser::__parsePaint(SvgParseState &svgParseState, const Core::String &cstrColour)
@@ -770,20 +758,21 @@ namespace Draw2d::Svg {
             Core::String strAlphaPercent = svgRgbMatch[6].str();
 
             // endless pita with svg.  seems handy, though.
-            std::unique_ptr<uint8_t[]> pBgra = nullptr;
+            std::array<uint8_t,4> pBgra { };
             unsigned nSize = 3;
             if(!Core::String::IsEmpty(strAlpha)) nSize = 4;
 
-            pBgra = std::make_unique<uint8_t[]>(nSize);
             pBgra[0] = Core::ParseFloat(strBlue.c_str());
             pBgra[1] = Core::ParseFloat(strGreen.c_str());
             pBgra[2] = Core::ParseFloat(strRed.c_str());
             if(nSize == 4) {
                 pBgra[3] = Core::ParseFloat(strAlpha.c_str());
                 if(!Core::String::IsEmpty(strAlphaPercent)) {
-                    pBgra[3] = Core::ParseFloat(strAlpha.c_str());
+                    pBgra[3] = static_cast<uint8_t>(pBgra[3] / 100.0f * 255.0);
                 }
             }
+            else pBgra[3] = 0xff;
+
             if (!Core::String::IsWhitespace(strRgbPercent.c_str()))
             {
                 // rgb given in percentage:
@@ -792,35 +781,47 @@ namespace Draw2d::Svg {
                 // convert to 0-255 byte value
                 for(unsigned index = 0; index < nSize; index++) pBgra[index] = static_cast<uint8_t>(pBgra[index]/100.0f* 255);
             }
-            return SvgColour(nSize == 4 ? SvgColourType::BgrA : SvgColourType::Bgr, -1, std::move(pBgra), nSize);
+            return SvgColour(nSize == 4 ? SvgColourType::BgrA : SvgColourType::Bgr, -1, std::move(pBgra));
         }
 
         std::cmatch svgHslMatch;
         if (std::regex_search(strColour.c_str(), svgHslMatch, SvgHslRegex))
         {
-            Core::String strHue = svgHslMatch[1].str();
-            Core::String strHueUnits = svgHslMatch[2].str();
-            Core::String strSaturation = svgHslMatch[3].str();
-            Core::String strLightness = svgHslMatch[4].str();
-            Core::String strAlpha = svgHslMatch[5].str();
-            Core::String strAlphaPercent = svgHslMatch[6].str();
+            Core::String strHue =               svgHslMatch[1].str();
+            Core::String strHueUnits =          svgHslMatch[2].str();
+            Core::String strSaturation =        svgHslMatch[3].str();
+            Core::String strSaturationPercent = svgHslMatch[4].str();
+            Core::String strLightness =         svgHslMatch[5].str();
+            Core::String strLightnessPercent =  svgHslMatch[6].str();
+            Core::String strAlpha =             svgHslMatch[7].str();
+            Core::String strAlphaPercent =      svgHslMatch[8].str();
 
             // endless pita with svg.  seems handy, though.
-            std::unique_ptr<uint8_t[]> pHsla = nullptr;
+            std::array<uint8_t,4> pHsla = { };
             unsigned nSize = 3;
             // NOTE - per the spec, the "a" is optional.  They can either provide an alpha or not with
             //  either hsl or hsla.  svgs are so loosey-goosey and munged up with css :-/
             if(strAlpha.length()) nSize = 4;
-            pHsla = std::make_unique<uint8_t[]>(nSize);
             pHsla[0] = Core::ParseFloat(strHue);
             pHsla[1] = Core::ParseFloat(strSaturation);
-            // clamp invalid values per spec
-            if(pHsla[1] < 0) pHsla[1] = 0;
-            if(pHsla[1] > 100) pHsla[1] = 100;
+            // clamp saturation per spec
+            if(strSaturationPercent.length()) {
+                pHsla[1] = std::clamp<float>(pHsla[1], 0.0f, 100.0f);
+                pHsla[1] /= 100.0f;
+            }
+            else {
+                pHsla[1] = std::clamp<float>(pHsla[1], 0.0f, 1.0f);
+                if(pHsla[1] < 0) pHsla[1] = 0;
+                if(pHsla[1] > 100) pHsla[1] = 100;
+            }
             pHsla[2] = Core::ParseFloat(strLightness);
-            // ditto
-            if(pHsla[2] < 0) pHsla[1] = 0;
-            if(pHsla[2] > 100) pHsla[1] = 100;
+            // clamp lightness per spec
+            if(strSaturationPercent.length()) {
+                pHsla[2] = std::clamp<float>(pHsla[2], 0.0f, 200.0f);
+                pHsla[2] /= 200.0f;
+            }
+            else pHsla[2] = std::clamp<float>(pHsla[2], 0.0f, 2.0f);
+
             if(nSize == 4) {
                 pHsla[3] = Core::ParseFloat(svgHslMatch[7].str());
                 if(!Core::String::IsEmpty(strAlphaPercent)) pHsla[3] /= 100.0f;
@@ -828,6 +829,8 @@ namespace Draw2d::Svg {
                 if(pHsla[3] < 0) pHsla[1] = 0;
                 if(pHsla[3] > 1.0f) pHsla[1] = 1.0f;
             }
+            else pHsla[4] = 1.0f;
+
             if(!strHueUnits.length() || strHueUnits.c_str() == DEGREES_UNIT) {
                 pHsla[0] *= (std::numbers::pi / 180.0f);
             }
@@ -838,7 +841,7 @@ namespace Draw2d::Svg {
                 else if(strHueUnits.c_str() == TURN_UNIT) pHsla[0] = (pHsla[0] * 360) * (std::numbers::pi / 180.0f);
                 else throw SvgException("Unrecognized units on hue in hsl(a) value {}: {}", strColour.c_str(), strHueUnits.c_str());
             }
-            return SvgColour(nSize == 4 ? SvgColourType::HslA : SvgColourType::Hsl, -1, std::move(pHsla), nSize);
+            return SvgColour(nSize == 4 ? SvgColourType::HslA : SvgColourType::Hsl, -1, std::move(pHsla));
         }
 
         if (strColour == "currentColor") return SvgColour(SvgColourType::CurrentColor);
@@ -848,29 +851,32 @@ namespace Draw2d::Svg {
             return SvgColour(SvgColourType::Cpal, index);
         }
 
-        if (StandardColours::Colours.contains(strColour)) return SvgColour(SvgColourType::Bgr, -1, StandardColours::BgrOf(strColour), 3);
+        if (StandardColours::Colours.contains(strColour)) return SvgColour(SvgColourType::Bgr, -1, StandardColours::BgrOf(strColour));
         
         std::cmatch colourMatch;
         if (!std::regex_search(strColour.c_str(), colourMatch, HexColourRegex)) throw SvgException("Couldn't recognize value in subParseColour `{}'",strColour.c_str());
         if ((colourMatch[1].length() % 2) == 1) throw SvgException(std::format("BGR/BGRA must be comprised of 6 or 8 colours, not {}",colourMatch[1].length()));
         unsigned nBgraLength = colourMatch[1].length() / 2;
-        std::unique_ptr<uint8_t[]> pBgra = std::make_unique<uint8_t[]>(nBgraLength);
+        std::array<uint8_t,4> bgra { };
         unsigned cIndex = 0;
         while (cIndex < colourMatch[1].length())
         {
-            pBgra[cIndex / 2] = (uint8_t)Core::ParseInteger(colourMatch[1].str().substr(cIndex, 2), BASE16);
+            bgra[cIndex / 2] = (uint8_t)Core::ParseInteger(colourMatch[1].str().substr(cIndex, 2), BASE16);
             cIndex += 2;
         }
 
         SvgColourType enumColourType = SvgColourType::NotAnSvgColourType;
         switch (nBgraLength)
         {
-            case 3: enumColourType = SvgColourType::Bgr; break;
+            case 3: 
+                enumColourType = SvgColourType::Bgr;
+                bgra[3] = 0xff;
+                break;
             case 4: enumColourType = SvgColourType::BgrA; break;
             default: throw SvgException("Unable to parse subcolour from {}",strColour.c_str());
         }
 
-        return SvgColour(enumColourType, -1, std::move(pBgra), nBgraLength);
+        return SvgColour(enumColourType, -1, std::move(bgra));
     } // SvgColour SvgParser::__parseColour(SvgParseState &, const Core::String &)
 
     std::unique_ptr<DataStructures::Tree::GeneralTree<Core::String>> SvgParser::__parseVar(const Core::String &cstrVar)
@@ -970,28 +976,29 @@ namespace Draw2d::Svg {
         if(bIsString || bBackslash || nParenthesisCount) throw SvgException("Invalid var(): in the middle of a string? {} terminated with a backslash in a string? {} surplus parenthesis count {} in {}", bIsString, bBackslash, nParenthesisCount, cstrVar.c_str());
     }
 
-    const GradientTemplate *SvgParser::__parseGradient(SvgParseState &svgParseState, DOMElement *pGradientElement)
+    const GradientTemplate *SvgParser::__parseGradient(SvgParseState &svgParseState, Xml::IDomEntity *pGradientElement)
     {
         std::unique_ptr<GradientTemplate> pGradientTemplate = std::make_unique<GradientTemplate>();
 
-        Core::String strId = Xml::DomParser::getAttributeIfExists(pGradientElement, ID_ATTRIBUTE);
+        Core::String strId { };
+        (void) pGradientElement->tryGetAttribute(ID_ATTRIBUTE, strId);
         GradientUnits enumGradientUnits = UserSpaceOnUse;
-        Core::String strGradientUnitsAttribute = Xml::DomParser::getAttributeIfExists(pGradientElement, GRADIENTUNITS_ATTRIBUTE);
-        if (!Core::String::IsWhitespace(strGradientUnitsAttribute)) enumGradientUnits = (GradientUnits)ParseGradientUnits(strGradientUnitsAttribute);
+        Core::String strGradientUnitsAttribute { };
+        if (pGradientElement->tryGetAttribute(GRADIENTUNITS_ATTRIBUTE, strGradientUnitsAttribute)) enumGradientUnits = (GradientUnits)ParseGradientUnits(strGradientUnitsAttribute);
         SpreadMethod enumSpreadMethod = SpreadMethod::Pad;
-        Core::String strSpreadMethod = Xml::DomParser::getAttributeIfExists(pGradientElement, SPREADMETHOD_ATTRIBUTE);
-        if (!Core::String::IsWhitespace(strSpreadMethod)) enumSpreadMethod = (SpreadMethod)ParseSpreadMethod(strSpreadMethod);
+        Core::String strSpreadMethod { };
+        if (pGradientElement->tryGetAttribute(SPREADMETHOD_ATTRIBUTE, strSpreadMethod)) enumSpreadMethod = (SpreadMethod)ParseSpreadMethod(strSpreadMethod);
         Core::String strValue;
-        std::unique_ptr<float[]> pMatrix {};
-        strValue = Xml::DomParser::getAttributeIfExists(pGradientElement, GRADIENTTRANSFORM_ATTRIBUTE);
-        if (!Core::String::IsWhitespace(strValue)) pMatrix = __parseTransform(strValue,"gradientTransform");
+        std::array<float,6> matrix {};
+        strValue = { };
+        if (pGradientElement->tryGetAttribute(GRADIENTTRANSFORM_ATTRIBUTE, strValue)) matrix = __parseTransform(strValue,"gradientTransform");
         std::vector<Stop<SvgColour>> stops = __parseStops(svgParseState, pGradientElement);
         Core::String strHref = __retrieveHref(svgParseState, pGradientElement);
 
         pGradientTemplate->strId = strId;
         pGradientTemplate->enumGradientUnits = enumGradientUnits;
         pGradientTemplate->enumSpreadMethod = enumSpreadMethod;
-        pGradientTemplate->pTransform = std::move(pMatrix);
+        pGradientTemplate->transform = std::move(matrix);
         pGradientTemplate->stops = std::move(stops);
 
         Core::String strGradientNodeName = Xml::String(pGradientElement->getTagName()).getTranscoded();
@@ -1006,17 +1013,17 @@ namespace Draw2d::Svg {
 ;
         if(strGradientNodeName == LINEAR_GRADIENT_NAME) {
             float x1, y1, x2, y2;
-            strValue = Xml::DomParser::getAttributeIfExists(pGradientElement, X1_ATTRIBUTE);
-            if (Core::String::IsWhitespace(strValue)) throw SvgException("Linear Gradient has no x1 attribute");
+            strValue = { };
+            if (!pGradientElement->tryGetAttribute(X1_ATTRIBUTE, strValue)) throw SvgException("Linear Gradient has no x1 attribute");
             x1 = Core::ParseFloat(strValue);
-            strValue = Xml::DomParser::getAttributeIfExists(pGradientElement, X2_ATTRIBUTE);
-            if (Core::String::IsWhitespace(strValue)) throw SvgException("Linear Gradient has no x2 attribute");
+            strValue = { };
+            if (!pGradientElement->tryGetAttribute(X2_ATTRIBUTE, strValue)) throw SvgException("Linear Gradient has no x2 attribute");
             x2 = Core::ParseFloat(strValue);
-            strValue = Xml::DomParser::getAttributeIfExists(pGradientElement, Y1_ATTRIBUTE);
-            if (Core::String::IsWhitespace(strValue)) throw SvgException("Linear Gradient has no y1 attribute");
+            strValue = { };
+            if(!pGradientElement->tryGetAttribute(Y1_ATTRIBUTE, strValue)) throw SvgException("Linear Gradient has no y1 attribute");
             y1 = Core::ParseFloat(strValue);
-            strValue = Xml::DomParser::getAttributeIfExists(pGradientElement, Y2_ATTRIBUTE);
-            if (Core::String::IsWhitespace(strValue)) throw SvgException("Linear Gradient has no y2 attribute");
+            strValue = { };
+            if (!pGradientElement->tryGetAttribute(Y2_ATTRIBUTE, strValue)) throw SvgException("Linear Gradient has no y2 attribute");
             y2 = Core::ParseFloat(strValue);
 
             attributes.insert(X1_ATTRIBUTE);
@@ -1025,11 +1032,10 @@ namespace Draw2d::Svg {
             attributes.insert(X2_ATTRIBUTE);
 
             auto nodeAttributes = pGradientElement->getAttributes();
-            for (unsigned i = 0; i < nodeAttributes->getLength(); i++)
+            for (auto &kvp : nodeAttributes)
             {
-                DOMNode *pAttribute = nodeAttributes->item(i);
-                Core::String strNodeName = Xml::String(pAttribute->getNodeName()).getTranscoded();
-                if (!attributes.contains(strNodeName)) throw SvgException("Unrecognized linear gradient attribute {}",strNodeName.c_str());
+                Core::String strNodeName = kvp.first;
+                if (!attributes.contains(strNodeName)) throw SvgException("Unrecognized linear gradient attribute {}",strNodeName);
             }
 
             pGradientTemplate->kind = GradientTemplate::linear;
@@ -1040,25 +1046,25 @@ namespace Draw2d::Svg {
         }
         else if(strGradientNodeName == RADIAL_GRADIENT_NAME) {
             float cx, cy, r, fx = 0.0f, fy = 0.0f, fr = 0.0f;
-            strValue = Xml::DomParser::getAttributeIfExists(pGradientElement, CX_ATTRIBUTE);
-            if (Core::String::IsWhitespace(strValue)) throw SvgException("Radial Gradient has no cx attribute");
+            strValue = { };
+            if (!pGradientElement->tryGetAttribute(CX_ATTRIBUTE, strValue)) throw SvgException("Radial Gradient has no cx attribute");
             cx = Core::ParseFloat(strValue);
-            strValue = Xml::DomParser::getAttributeIfExists(pGradientElement, CY_ATTRIBUTE);
-            if (Core::String::IsWhitespace(strValue)) throw SvgException("Radial Gradient has no cy attribute");
+            strValue = { };
+            if (!pGradientElement->tryGetAttribute(CY_ATTRIBUTE, strValue)) throw SvgException("Radial Gradient has no cy attribute");
             cy = Core::ParseFloat(strValue);
-            strValue = Xml::DomParser::getAttributeIfExists(pGradientElement, R_ATTRIBUTE);
-            if (Core::String::IsWhitespace(strValue)) throw SvgException("Radial Gradient has no r attribute");
+            strValue = { };
+            if (!pGradientElement->tryGetAttribute(R_ATTRIBUTE, strValue)) throw SvgException("Radial Gradient has no r attribute");
             r = Core::ParseFloat(strValue);
-            strValue = Xml::DomParser::getAttributeIfExists(pGradientElement, FX_ATTRIBUTE);
-            if (!Core::String::IsWhitespace(strValue)) {
+            strValue = { };
+            if (pGradientElement->tryGetAttribute(FX_ATTRIBUTE, strValue)) {
                 fx = Core::ParseFloat(strValue);
             }
-            strValue = Xml::DomParser::getAttributeIfExists(pGradientElement, FY_ATTRIBUTE);
-            if (!Core::String::IsWhitespace(strValue)) {
+            strValue = { };
+            if (pGradientElement->tryGetAttribute(FY_ATTRIBUTE, strValue)) {
                 fy = Core::ParseFloat(strValue);
             }
-            strValue = Xml::DomParser::getAttributeIfExists(pGradientElement, FR_ATTRIBUTE);
-            if (!Core::String::IsWhitespace(strValue)) {
+            strValue = { };
+            if (pGradientElement->tryGetAttribute(FR_ATTRIBUTE, strValue)) {
                 fr = Core::ParseFloat(strValue);
             }
 
@@ -1070,11 +1076,10 @@ namespace Draw2d::Svg {
             attributes.insert(R_ATTRIBUTE);
 
             auto nodeAttributes = pGradientElement->getAttributes();
-            for (unsigned i = 0; i < nodeAttributes->getLength(); i++)
+            for (auto &kvp : nodeAttributes)
             {
-                DOMNode *pAttribute = nodeAttributes->item(i);
-                Core::String strNodeName = Xml::String(pAttribute->getNodeName()).getTranscoded();
-                if (!attributes.contains(strNodeName)) throw SvgException("Unrecognized radial gradient attribute {}",strNodeName.c_str());
+                Core::String strNodeName = kvp.first;
+                if (!attributes.contains(strNodeName)) throw SvgException("Unrecognized linear gradient attribute {}",strNodeName);
             }
 
             pGradientTemplate->kind = GradientTemplate::radial;
@@ -1092,7 +1097,7 @@ namespace Draw2d::Svg {
         return cpGradientTemplate;
     } // const GradientTemplate *SvgParser::__parseGradient(DOMDocument *, DOMElement *)
 
-    std::unique_ptr<float[]> SvgParser::__parseTransform(const Core::String &cstrTransform, const Core::String &cstrAttributeName)
+    std::array<float,6> SvgParser::__parseTransform(const Core::String &cstrTransform, const Core::String &cstrAttributeName)
     {
         Core::String strTransform = cstrTransform.trim();
         std::cmatch translateMatch;
@@ -1101,93 +1106,90 @@ namespace Draw2d::Svg {
         std::cmatch skewXyMatch;
         std::cmatch matrixMatch;
         size_t pos = 0;
-        std::unique_ptr<float[]> pRunningTransform = Core::makeUniqueArray<float>({ 1, 0, 0, 1, 0, 0 });
+        std::array<float,6> runningTransform = { 1, 0, 0, 1, 0, 0 };
         while(pos < strTransform.length()) {
             if (std::regex_search(strTransform.c_str() + pos, translateMatch, TranslateRegex)) {
                 size_t localPos = 0;
-                auto [ pointCount,points ] = __parsePoints(translateMatch[1].str(), localPos);
+                auto points = __parsePoints(translateMatch[1].str(), localPos, 2);
                 pos += translateMatch[0].str().length();
-                if(pointCount < 1 || pointCount > 2) throw SvgException("translate doesn't consist of 1 or 2 points at pos {} {} {}", pos, translateMatch[1].str(), strTransform.c_str());
-                std::unique_ptr<float[]> pTranslateMatrix = Core::makeUniqueArray<float>({ 1, 0, 0, 1, points[0], pointCount == 2 ? points[1] : 0 });
-                pRunningTransform = Draw2d::Svg::multiply6s<float>(pRunningTransform.get(),pTranslateMatrix.get());
+                if(!points.size()) throw SvgException("translate requires 1 or 2 points at pos {} {} {}", pos, translateMatch[1].str(), strTransform.c_str());
+                std::array<float, 6> pTranslateMatrix = { 1, 0, 0, 1, points[0], points.size() == 2 ? points[1] : 0 };
+                runningTransform = Draw2d::Svg::multiply6s<float>(runningTransform,pTranslateMatrix);
                 continue;
             }
             if (std::regex_search(strTransform.c_str() + pos, scaleMatch, ScaleRegex)) {
                 size_t localPos = 0;
-                auto [ pointCount,points ] = __parsePoints(scaleMatch[1].str(), localPos);
+                auto points = __parsePoints(scaleMatch[1].str(), localPos, 2);
+                if(!points.size()) throw SvgException("scale must consist of 1 or 2 points at pos {} {} {}", pos, scaleMatch[1].str(), strTransform.c_str());
                 pos += scaleMatch[0].str().length();
-                if(pointCount < 1 || pointCount > 2) throw SvgException("scale doesn't consist of 1 or 2 points at pos {} {} {}", pos, scaleMatch[1].str(), strTransform.c_str());
-                std::unique_ptr<float[]> pScaleMatrix = Core::makeUniqueArray<float>({ points[0], 0, 0,  pointCount == 2 ? points[1] : points[0], 0, 0 });
-                pRunningTransform = Draw2d::Svg::multiply6s<float>(pRunningTransform.get(),pScaleMatrix.get());
+                std::array<float,6> scaleMatrix = { points[0], 0, 0,  points.size() == 2 ? points[1] : points[0], 0, 0 };
+                runningTransform = Draw2d::Svg::multiply6s<float>(runningTransform,scaleMatrix);
                 continue;
             }
             if (std::regex_search(strTransform.c_str() + pos, rotateMatch, RotateRegex)) {
                 size_t localPos = 0;
-                auto [ pointCount,points ] = __parsePoints(rotateMatch[1].str(), localPos);
+                auto points  = __parsePoints(rotateMatch[1].str(), localPos, 3);
                 pos += rotateMatch[0].str().length();
-                if(pointCount != 1 && pointCount != 3) throw SvgException("rotate doesn't consist of 1 or 2 points at pos {} {} {}", pos, rotateMatch[1].str(), strTransform.c_str());
+                if(points.size() != 1 && points.size() != 3) throw SvgException("rotate doesn't consist of 1 or 2 points at pos {} {} {}", pos, rotateMatch[1].str(), strTransform.c_str());
                 float angleRadians = points[0] * (std::numbers::pi / 180.0f);
                 float cosAngleRadians = std::cos(angleRadians);
                 float sinAngleRadians = std::sin(angleRadians);
-                std::unique_ptr<float[]> pRotationMatrix = Core::makeUniqueArray<float>({ cosAngleRadians, sinAngleRadians, -sinAngleRadians, cosAngleRadians, 0, 0 });
-                if(pointCount == 3) {
+                std::array<float,6> rotationMatrix = { cosAngleRadians, sinAngleRadians, -sinAngleRadians, cosAngleRadians, 0, 0 };
+                if(points.size() == 3) {
                     // three points = rotate around a point.  Translate to the point, rotate, translate back again.
-                    std::unique_ptr<float[]> pTranslationMatrix_there = Core::makeUniqueArray<float>({ 1, 0, 0, 1, points[1], points[2] });
-                    std::unique_ptr<float[]> pTranslationMatrix_backAgain = Core::makeUniqueArray<float>({ 1, 0, 0, 1, -points[1], -points[2] });
-                    pRunningTransform = Draw2d::Svg::multiply6s<float>(pRunningTransform.get(),pTranslationMatrix_there.get());
-                    pRunningTransform = Draw2d::Svg::multiply6s<float>(pRunningTransform.get(),pRotationMatrix.get());
-                    pRunningTransform = Draw2d::Svg::multiply6s<float>(pRunningTransform.get(),pTranslationMatrix_backAgain.get());
+                    std::array<float,6> translationMatrix_there = { 1, 0, 0, 1, points[1], points[2] };
+                    std::array<float,6> translationMatrix_backAgain = { 1, 0, 0, 1, -points[1], -points[2] };
+                    runningTransform = Draw2d::Svg::multiply6s<float>(runningTransform,translationMatrix_there);
+                    runningTransform = Draw2d::Svg::multiply6s<float>(runningTransform,rotationMatrix);
+                    runningTransform = Draw2d::Svg::multiply6s<float>(runningTransform,translationMatrix_backAgain);
                 }
-                else pRunningTransform = Draw2d::Svg::multiply6s<float>(pRunningTransform.get(),pRotationMatrix.get());
+                else runningTransform = Draw2d::Svg::multiply6s<float>(runningTransform,rotationMatrix);
                 continue;
             }
             if (std::regex_search(strTransform.c_str() + pos, skewXyMatch, SkewXyRegex)) {
                 Core::String xOrY = skewXyMatch[1].str();
                 if(xOrY != "X" && xOrY != "Y") throw SvgException("Invalid value for skew_; (should be 'X' or 'Y', not {}) at {} in {}", xOrY.c_str(), pos, strTransform.c_str());
                 size_t localPos = 0;
-                auto [ pointCount,points ] = __parsePoints(skewXyMatch[2].str(), localPos);
+                auto points  = __parsePoints(skewXyMatch[2].str(), localPos, 1, true);
                 pos += skewXyMatch[0].str().length();
-                if(pointCount != 1) throw SvgException("skew[XY] requires exactly 1 point at pos {} {} {}", pos, skewXyMatch[1].str(), strTransform.c_str());
                 float angleRadians = points[0] * (std::numbers::pi / 180.0f);
-                std::unique_ptr<float[]> pSkewMatrix = Core::makeUniqueArray<float>({ 1, (xOrY == "Y" ? angleRadians : 0),(xOrY == "X" ? angleRadians : 0), 1, 0, 0 });
-                pRunningTransform = Draw2d::Svg::multiply6s<float>(pRunningTransform.get(),pSkewMatrix.get());
+                std::array<float,6> skewMatrix = { 1, (xOrY == "Y" ? angleRadians : 0),(xOrY == "X" ? angleRadians : 0), 1, 0, 0 };
+                runningTransform = Draw2d::Svg::multiply6s<float>(runningTransform,skewMatrix);
                 continue;
             }
             if (std::regex_search(strTransform.c_str() + pos, matrixMatch, MatrixRegex)) {
                 size_t localPos = 0;
-                auto [ pointCount,points ] = __parsePoints(matrixMatch[1].str(), localPos);
+                auto points = __parsePoints(matrixMatch[1].str(), localPos, 6, true);
+                // TODO
+                std::array<float,6> transform { };
+                std::copy(points.begin(), points.end(), transform.begin());
                 pos += matrixMatch[0].str().length();
-                if(pointCount != 6) throw SvgException("matrix doesn't consist of exactly 6 points at pos {} {} {}", pos, matrixMatch[1].str(), strTransform.c_str());
-                pRunningTransform = Draw2d::Svg::multiply6s<float>(pRunningTransform.get(),points.get());
+                runningTransform = Draw2d::Svg::multiply6s<float>(runningTransform,transform);
                 continue;
             }
 
             throw SvgException("Supplied transform {} is not a valid transform",strTransform.c_str());
         }
 
-        return pRunningTransform;
-    } // std::unique_ptr<float[]> SvgParser::__parseTransform(Core::String, Core::String)
+        return runningTransform;
+    } // std::array<float,6> SvgParser::__parseTransform(Core::String, Core::String)
 
-    std::vector<Stop<SvgColour>> SvgParser::__parseStops(SvgParseState &svgParseState, DOMElement *pStopsNode)
+    std::vector<Stop<SvgColour>> SvgParser::__parseStops(SvgParseState &svgParseState, Xml::IDomEntity *pStopsEntity)
     {
         std::vector<Stop<SvgColour>> results { };
-        for (DOMNode *pStopNode = pStopsNode->getFirstChild(); pStopNode != nullptr; pStopNode = pStopNode->getNextSibling())
+        for(std::unique_ptr<Xml::IDomEntity> pStopNode = std::move(pStopsEntity->getFirstChild());
+            pStopNode; pStopNode = pStopNode->getNextSibling())
         {
-            if (pStopNode->getNodeType() != DOMNode::ELEMENT_NODE) continue;
-
-            DOMElement *pStopElement = dynamic_cast<DOMElement *>(pStopNode);
-            if(!pStopElement) throw SvgException("Internal error");
-
             float offset;
-            Core::String strOffsetAttribute = Xml::DomParser::getAttributeIfExists(pStopElement, OFFSET_ATTRIBUTE);
-            if (Core::String::IsWhitespace(strOffsetAttribute)) throw SvgException("offset is a required attribute");
+            Core::String strOffsetAttribute {};
+            if (!pStopNode->tryGetAttribute(OFFSET_ATTRIBUTE, strOffsetAttribute)) throw SvgException("offset is a required attribute");
             offset = Core::ParseFloat(strOffsetAttribute);
             if (offset < 0 || offset > 1) throw SvgException(std::format("{} is invalid for offset (0 <= offset <= 1)",offset));
-            Core::String strStopColourAttribute = Xml::DomParser::getAttributeIfExists(pStopElement, STOP_COLOUR_ATTRIBUTE);
-            if (Core::String::IsWhitespace(strStopColourAttribute)) throw SvgException("stopColour is a required attribute");
+            Core::String strStopColourAttribute { };
+            if (!pStopNode->tryGetAttribute(STOP_COLOUR_ATTRIBUTE, strStopColourAttribute)) throw SvgException("stop-colour is a required attribute");
             float fOpacity = 1.0f;
-            Core::String strOpacityAttribute = Xml::DomParser::getAttributeIfExists(pStopElement, STOP_OPACITY_ATTRIBUTE);
-            if (!Core::String::IsWhitespace(strOpacityAttribute))
+            Core::String strOpacityAttribute = { };
+            if (pStopNode->tryGetAttribute(STOP_OPACITY_ATTRIBUTE, strOpacityAttribute))
             {
                 fOpacity = Core::ParseFloat(strOpacityAttribute);
                 if (fOpacity < 0 || fOpacity > 1) throw SvgException(std::format("{} is invalid for opacity (0 <= opacity <= 1)",fOpacity));
@@ -1202,29 +1204,4 @@ namespace Draw2d::Svg {
         return results;
     } // std::vector<Stop<Colour>> SvgParser::__parseStops(SvgParseState &, DOMElement *)
 
-    xc::DOMElement *SvgParser::__getElementById(xc::DOMDocument *pSvg, const Xml::String &cstrId)
-    {
-        // irksome that xerces doesn't recognize id attributes without validation,
-        //  let's at least cache the results
-        if(m_elementByIdCache.contains(cstrId)) return m_elementByIdCache[cstrId];
-        DOMElement *pRootNode = pSvg->getDocumentElement();
-        return __recurseForId(pRootNode, cstrId);
-    }
-
-    xc::DOMElement *SvgParser::__recurseForId(xc::DOMElement *pRootNode, const Xml::String &cstrId)
-    {
-        for (DOMNode *pChildElement = pRootNode->getFirstChild(); pChildElement != nullptr; pChildElement = pChildElement->getNextSibling())
-        {
-            if (pChildElement->getNodeType() != DOMNode::ELEMENT_NODE) continue;
-
-            DOMElement *pChildNode = static_cast<DOMElement*>(pChildElement);
-            Core::String strId = Xml::DomParser::getAttributeIfExists(pChildNode, ID_ATTRIBUTE);
-            if(!Core::String::IsWhitespace(strId)) {
-                m_elementByIdCache[Xml::String(strId)] = pChildNode;
-                if(strId == cstrId) return pChildNode;
-            }
-            __recurseForId(pChildNode,cstrId);
-        }
-        return nullptr;
-    }
 } // namespace Draw2d::Svg

@@ -19,17 +19,20 @@
 #include <xercesc/parsers/XercesDOMParser.hpp>     // XercesDOMParser
 #include <xercesc/dom/DOM.hpp>               // DOMDocument, DOMElement, DOMNodeList, etc
 
-#include "xml/DomParser.hpp"
+#include "xml/XercesDomParser.hpp"
 
 #ifndef XMLEXCEPTION_DOT_HPP
     #include "xml/XmlException.hpp"
+#endif
+#ifndef XML_XERCESDOMDOCUMENT_DOT_HPP
+    #include "xml/XercesDomDocument.hpp"
 #endif
 
 namespace Xml {
     
     XERCES_CPP_NAMESPACE_USE
 
-    DOMDocument *DomParser::Parse(const Core::String &rawXml, bool bDoNamespace, bool bDoSchema) {
+    std::unique_ptr<IDomDocument> XercesDomParser::parse(const Core::String &rawXml, bool bDoNamespace, bool bDoSchema) {
         // thx claude <3
         XercesDOMParser parser;
         parser.setDoNamespaces(bDoNamespace);
@@ -69,9 +72,10 @@ namespace Xml {
             throw XmlException(GeneralError, strExceptionMessage);
         }
 
-        DOMDocument *document = parser.adoptDocument();
-        if(!document) throw XmlException(GeneralError, "Failed to parse document");
+        DOMDocument *pDocument = parser.adoptDocument();
+        if(!pDocument) throw XmlException(GeneralError, "Failed to parse document");
 
-        return document;
+        return std::make_unique<XercesDomDocument>(pDocument);
     } // DOMDocument *DOMParser::Parse(const std::string &rawXml)
+
 }

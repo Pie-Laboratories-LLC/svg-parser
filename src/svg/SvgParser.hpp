@@ -20,7 +20,6 @@
 #include <xercesc/dom/DOM.hpp>               // xc::DOMDocument, xc::DOMElement, DOMNodeList, etc
 #include <vector>
 #include <memory>
-#include <map>
 #include <regex>
 #include <tuple>
 #include <unordered_set>
@@ -35,12 +34,6 @@
 #endif
 #ifndef PATHMOVE_DOT_HPP
     #include "svg/PathMove.hpp"
-#endif
-#ifndef XML_STRING_DOT_HPP
-    #include "xml/String.hpp"
-#endif
-#ifndef DRAW2D_STOP_DOT_HPP
-    #include "draw2d/Stop.hpp"
 #endif
 #ifndef DRAW2D_GRADIENTUNITS_DOT_HPP
     #include "draw2d/GradientUnits.hpp"
@@ -73,14 +66,21 @@ namespace DataStructures::Tree {
 }
 
 namespace Draw2d {
+
     template<typename T>
     class Gradient;
+
+}
+
+namespace Xml {
+
+    class IDomEntity;
+    class IDomParser;
+    class IDomDocument;
+
 }
 
 namespace Draw2d::Svg {
-
-    // thanks anonymous github'r that claude stole from!
-    namespace xc = XERCES_CPP_NAMESPACE;
 
     class SvgEntity;
     class Path;
@@ -101,8 +101,8 @@ namespace Draw2d::Svg {
 
     struct SvgParseState {
         SvgDocument &svgDocument;
+        std::unique_ptr<Xml::IDomDocument> pRootEntity;
         std::vector<Svg *> currentSvg {};
-        xc::DOMDocument *pSvg = nullptr;
         bool bWithNamespace = false;
         bool bWithValidation = false;
         std::unordered_set<Core::String> useReferences { };
@@ -207,33 +207,33 @@ namespace Draw2d::Svg {
     private:
         SvgParserCallback m_callback = [](SvgParserStatus, const Core::String &) {}; // noop
 
-        const Svg *__parseSvgElement(SvgParseState &svgParseState, xc::DOMElement *pRootElement, SvgParserContext svgParserContext);
-        void __parseGlobalScope(SvgParseState &svgParserState, xc::DOMElement *pParentElement, SvgParserContext svgParserContext);
+        const Svg *__parseSvgElement(SvgParseState &svgParseState, Xml::IDomEntity *pRootElement, SvgParserContext svgParserContext);
+        void __parseGlobalScope(SvgParseState &svgParserState, Xml::IDomEntity *pParentElement, SvgParserContext svgParserContext);
 
-        std::tuple<std::optional<Dimension>,std::optional<Dimension>,std::optional<Dimension>,std::optional<Dimension>> __parseDimensions(SvgParseState &svgParseState, xc::DOMElement *pChildElement);
-        std::optional<Dimension> __parseDimension(xc::DOMElement *pChildElement, const Core::String &cstrAttributeName);
-        std::optional<Dimension> __parseAutoDimension(xc::DOMElement *pChildElement, const Core::String &cstrAttributeName);
+        std::tuple<std::optional<Dimension>,std::optional<Dimension>,std::optional<Dimension>,std::optional<Dimension>> __parseDimensions(SvgParseState &svgParseState, Xml::IDomEntity *pChildElement);
+        std::optional<Dimension> __parseDimension(Xml::IDomEntity *pChildElement, const Core::String &cstrAttributeName);
+        std::optional<Dimension> __parseAutoDimension(Xml::IDomEntity *pChildElement, const Core::String &cstrAttributeName);
 
-        SvgPathLengthableParams __checkPathLengthable(SvgParseState &svgParseState, xc::DOMElement *pChildElement, SvgParserContext svgParserContext);
+        SvgPathLengthableParams __checkPathLengthable(SvgParseState &svgParseState, Xml::IDomEntity *pChildElement, SvgParserContext svgParserContext);
 
-        void __snagStyle(SvgParseState &svgParserState, xc::DOMElement *pStyleElement);
+        void __snagStyle(SvgParseState &svgParserState, Xml::IDomEntity *pStyleElement);
 
-        const SvgEntity *__parseSvgEntity(SvgParseState &svgParseState, xc::DOMElement *pChildElement, SvgParserContext svgParserContext);
+        const SvgEntity *__parseSvgEntity(SvgParseState &svgParseState, Xml::IDomEntity *pChildElement, SvgParserContext svgParserContext);
 
         template <typename F>
-        void __applyIfSet(xc::DOMElement *pElement, const Core::String &cstrAttributeName, F &&apply);
-        void __updateInheritedProperties(SvgParseState &svgParseState, xc::DOMElement *pElement, SvgParserContext &svgParserContext);
-        void __parseCommonProperties(SvgParseState &svgParseState, xc::DOMElement *pRenderedElement, SvgEntityParams &params, const SvgParserContext &svgParserContext);
+        void __applyIfSet(Xml::IDomEntity *pElement, const Core::String &cstrAttributeName, F &&apply);
+        void __updateInheritedProperties(SvgParseState &svgParseState, Xml::IDomEntity *pElement, SvgParserContext &svgParserContext);
+        void __parseCommonProperties(SvgParseState &svgParseState, Xml::IDomEntity *pRenderedElement, SvgEntityParams &params, const SvgParserContext &svgParserContext);
         void __saveEntityToDocument(SvgParseState &svgParseState,const SvgEntity *cpEntity);
-        const Group *__parseGroup(SvgParseState &svgParseState, xc::DOMElement *pGroupNode, SvgParserContext svgParserContext);
-        const Path *__parsePath(SvgParseState &svgParseState, xc::DOMElement *pPathNode, const SvgParserContext &svgParserContextIn);
-        const Use *__parseUse(SvgParseState &svgParseState, xc::DOMElement *pUseElement, SvgParserContext svgParserContext);
-        const Rect *__parseRect(SvgParseState &svgParseState, xc::DOMElement *pRectElement, SvgParserContext svgParserContext);
-        const Ellipse *__parseEllipse(SvgParseState &svgParseState, xc::DOMElement *pEllipseElement, SvgParserContext svgParserContext);
-        const Circle *__parseCircle(SvgParseState &svgParseState, xc::DOMElement *pCircleElement, SvgParserContext svgParserContext);
+        const Group *__parseGroup(SvgParseState &svgParseState, Xml::IDomEntity *pGroupNode, SvgParserContext svgParserContext);
+        const Path *__parsePath(SvgParseState &svgParseState, Xml::IDomEntity *pPathNode, const SvgParserContext &svgParserContextIn);
+        const Use *__parseUse(SvgParseState &svgParseState, Xml::IDomEntity *pUseElement, SvgParserContext svgParserContext);
+        const Rect *__parseRect(SvgParseState &svgParseState, Xml::IDomEntity *pRectElement, SvgParserContext svgParserContext);
+        const Ellipse *__parseEllipse(SvgParseState &svgParseState, Xml::IDomEntity *pEllipseElement, SvgParserContext svgParserContext);
+        const Circle *__parseCircle(SvgParseState &svgParseState, Xml::IDomEntity *pCircleElement, SvgParserContext svgParserContext);
 
-        Core::String __retrieveHref(SvgParseState &svgParseState, xc::DOMElement *pElement);
-        std::pair<unsigned,std::unique_ptr<float[]>> __parsePoints(const Core::String &d, size_t &pos);
+        Core::String __retrieveHref(SvgParseState &svgParseState, Xml::IDomEntity *pElement);
+        std::vector<float> __parsePoints(const Core::String &d, size_t &pos, size_t nMaximumPoints = 0, bool bExactMaximum = false);
 
         SvgPaint __parsePaint(SvgParseState &svgParseState, const Core::String &colour);
         SvgColour __parseColour(SvgParseState &svgParseState, const Core::String &colour);
@@ -241,15 +241,12 @@ namespace Draw2d::Svg {
         std::unique_ptr<DataStructures::Tree::GeneralTree<Core::String>> __parseVar(const Core::String &cstrVar);
         void __doParseVar(const Core::String &cstrVar, size_t &nPos, DataStructures::Tree::GeneralTree<Core::String> *pGeneralTree, DataStructures::Tree::GeneralTreeNode<Core::String> *pGeneralTreeNode = nullptr);
 
-        const GradientTemplate *__parseGradient(SvgParseState &svgParseState, xc::DOMElement *node);
+        const GradientTemplate *__parseGradient(SvgParseState &svgParseState, Xml::IDomEntity *pGradientElement);
 
-        std::unique_ptr<float[]> __parseTransform(const Core::String &value, const Core::String &attributeName);
+        std::array<float,6> __parseTransform(const Core::String &value, const Core::String &attributeName);
 
-        std::vector<Stop<SvgColour>> __parseStops(SvgParseState &svgParseState, xc::DOMElement *pStopsNode);
+        std::vector<Stop<SvgColour>> __parseStops(SvgParseState &svgParseState, Xml::IDomEntity *pStopsNode);
 
-        std::map<Xml::String,xc::DOMElement *> m_elementByIdCache {};
-        xc::DOMElement *__getElementById(xc::DOMDocument *pSvg, const Xml::String &cstrId);
-        xc::DOMElement *__recurseForId(xc::DOMElement *pRootNode, const Xml::String &cstrId);
     }; // class SvgParser
 
 } // namespace Draw2d::Svg
