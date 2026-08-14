@@ -593,15 +593,15 @@ namespace Draw2d::Svg {
 
         auto [ x, y, width, height ] = __parseDimensions(svgParseState, pRectElement);
 
-        auto cx = __parseDimension(pRectElement, X_ATTRIBUTE);
-        auto cy = __parseDimension(pRectElement, Y_ATTRIBUTE);
+        auto rx = __parseDimension(pRectElement, RX_ATTRIBUTE);
+        auto ry = __parseDimension(pRectElement, RY_ATTRIBUTE);
 
         svgRectParams.svgDimensionedParams.x = x;
         svgRectParams.svgDimensionedParams.y = y;
         svgRectParams.svgDimensionedParams.width = width;
         svgRectParams.svgDimensionedParams.height = height;
-        svgRectParams.cx = cx;
-        svgRectParams.cy = cy;
+        svgRectParams.rx = rx;
+        svgRectParams.ry = ry;
 
         std::unique_ptr<Rect> pRect = std::make_unique<Rect>(std::move(svgRectParams));
         Rect *toReturn = svgParserContext.getChildWrangler()->addChildAs(std::move(pRect));
@@ -994,12 +994,14 @@ namespace Draw2d::Svg {
         if (pGradientElement->tryGetAttribute(GRADIENTTRANSFORM_ATTRIBUTE, strValue)) matrix = __parseTransform(strValue,"gradientTransform");
         std::vector<Stop<SvgColour>> stops = __parseStops(svgParseState, pGradientElement);
         Core::String strHref = __retrieveHref(svgParseState, pGradientElement);
+        strHref.trim_start_in_place(" #");
 
-        pGradientTemplate->strId = strId;
+        pGradientTemplate->strId = std::move(strId);
         pGradientTemplate->enumGradientUnits = enumGradientUnits;
         pGradientTemplate->enumSpreadMethod = enumSpreadMethod;
         pGradientTemplate->transform = std::move(matrix);
         pGradientTemplate->stops = std::move(stops);
+        pGradientTemplate->strHrefId = std::move(strHref);
 
         Core::String strGradientNodeName = Xml::String(pGradientElement->getTagName()).getTranscoded();
         std::unordered_set<Core::String> attributes { 

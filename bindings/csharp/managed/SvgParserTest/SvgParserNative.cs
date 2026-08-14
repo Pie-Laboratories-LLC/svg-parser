@@ -24,6 +24,9 @@ internal static class SvgParserNative {
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern IntPtr svgparser_document_get_root(IntPtr doc);
 
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern IntPtr svgparser_document_get_style(IntPtr doc);
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
     public static extern IntPtr svgparser_document_lookup_svg_entity(IntPtr doc, string id);
 
@@ -79,7 +82,7 @@ internal static class SvgParserNative {
     public static extern IntPtr svgparser_stop_get_colour(IntPtr stop);
 
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern IntPtr svgparser_entity_get_tag_name(IntPtr entity);
+    public static extern IntPtr svgparser_entity_get_type(IntPtr entity);
 
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern IntPtr svgparser_entity_get_id(IntPtr entity);
@@ -182,9 +185,218 @@ internal static class SvgParserNative {
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern void svgparser_entity_enumerate_children(IntPtr entity, SvgEntityCallback callback, IntPtr userData);
 
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_entity_get_dimensioned(IntPtr entity); // does implement SvgDimensionedEntity?
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_dimensionedentity_has_x(IntPtr dimensionedEntity); // does implement SvgDimensionedEntity?
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_dimensionedentity_get_x_measurement(IntPtr dimensionedEntity); // does implement SvgDimensionedEntity?
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_dimensionedentity_get_x_units(IntPtr dimensionedEntity); // does implement SvgDimensionedEntity?
+
+    public static DimensionUnits GetDimensionedXUnits(IntPtr paint) =>
+        (DimensionUnits)svgparser_dimensionedentity_get_x_units(paint);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_dimensionedentity_has_y(IntPtr dimensionedEntity); // does implement SvgDimensionedEntity?
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_dimensionedentity_get_y_measurement(IntPtr dimensionedEntity); // does implement SvgDimensionedEntity?
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_dimensionedentity_get_y_units(IntPtr dimensionedEntity); // does implement SvgDimensionedEntity?
+
+    public static DimensionUnits GetDimensionedYUnits(IntPtr paint) =>
+        (DimensionUnits)svgparser_dimensionedentity_get_y_units(paint);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_dimensionedentity_has_width(IntPtr dimensionedEntity); // does implement SvgDimensionedEntity?
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_dimensionedentity_get_width_measurement(IntPtr dimensionedEntity); // does implement SvgDimensionedEntity?
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_dimensionedentity_get_width_units(IntPtr dimensionedEntity); // does implement SvgDimensionedEntity?
+
+    public static DimensionUnits GetDimensionedWidthUnits(IntPtr paint) =>
+        (DimensionUnits)svgparser_dimensionedentity_get_width_units(paint);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_dimensionedentity_has_height(IntPtr dimensionedEntity); // does implement SvgDimensionedEntity?
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_dimensionedentity_get_height_measurement(IntPtr dimensionedEntity); // does implement SvgDimensionedEntity?
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_dimensionedentity_get_height_units(IntPtr dimensionedEntity); // does implement SvgDimensionedEntity?
+
+    public static DimensionUnits GetDimensionedHeightUnits(IntPtr paint) =>
+        (DimensionUnits)svgparser_dimensionedentity_get_height_units(paint);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_entity_get_container(IntPtr entity); // does implement SvgDimensionedEntity?
+
+    // --- Path ---
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern IntPtr svgparser_entity_as_path(IntPtr entity);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_path_get_points_count(IntPtr path);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern void svgparser_path_get_points(IntPtr path, float[] buffer, int bufferSize);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_path_get_moves_count(IntPtr path);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void svgparser_path_get_moves(IntPtr path, int[] buffer, int bufferSize);
+
+    public static PathMove[] GetPathMoves(IntPtr path) {
+        int count = svgparser_path_get_moves_count(path);
+        int[] buffer = new int[count];
+        svgparser_path_get_moves(path, buffer, count);
+        PathMove[] toReturn = new PathMove[count];
+        int index = 0;
+        foreach(int pathMove in buffer) {
+            toReturn[index++] = (PathMove)pathMove;
+        }
+        return toReturn;
+    }
+
+    // --- Group ---
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern IntPtr svgparser_entity_as_group(IntPtr entity);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_group_get_opacity(IntPtr group);
+
+    // --- Rect ---
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern IntPtr svgparser_entity_as_rect(IntPtr entity);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_rect_has_rx(IntPtr rect);
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_rect_get_rx_measurement(IntPtr rect);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_rect_get_rx_units(IntPtr rect);
+
+    public static DimensionUnits GetRectRxUnits(IntPtr paint) =>
+        (DimensionUnits)svgparser_rect_get_rx_units(paint);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_rect_has_ry(IntPtr rect);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_rect_get_ry_measurement(IntPtr rect);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_rect_get_ry_units(IntPtr rect);
+
+    public static DimensionUnits GetRectRyUnits(IntPtr rect) =>
+        (DimensionUnits)svgparser_rect_get_ry_units(rect);
+
+    // --- Circle ---
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern IntPtr svgparser_entity_as_circle(IntPtr entity);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_circle_has_cx(IntPtr circle);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_circle_get_cx_measurement(IntPtr circle);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_circle_get_cx_units(IntPtr circle);
+
+    public static DimensionUnits GetCircleCxUnits(IntPtr circle) =>
+        (DimensionUnits)svgparser_circle_get_cx_units(circle);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_circle_has_cy(IntPtr circle);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_circle_get_cy_measurement(IntPtr circle);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_circle_get_cy_units(IntPtr circle);
+
+    public static DimensionUnits GetCircleCyUnits(IntPtr circle) =>
+        (DimensionUnits)svgparser_circle_get_cy_units(circle);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_circle_has_r(IntPtr circle);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_circle_get_r_measurement(IntPtr circle);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_circle_get_r_units(IntPtr circle);
+
+    public static DimensionUnits GetCircleRUnits(IntPtr circle) =>
+        (DimensionUnits)svgparser_circle_get_r_units(circle);
+
+
+    // --- Ellipse ---
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern IntPtr svgparser_entity_as_ellipse(IntPtr entity);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_ellipse_has_cx(IntPtr ellipse);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_ellipse_get_cx_measurement(IntPtr ellipse);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_ellipse_get_cx_units(IntPtr ellipse);
+
+    public static DimensionUnits GetEllipseCxUnits(IntPtr ellipse) =>
+        (DimensionUnits)svgparser_ellipse_get_cx_units(ellipse);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_ellipse_has_cy(IntPtr ellipse);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_ellipse_get_cy_measurement(IntPtr ellipse);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_ellipse_get_cy_units(IntPtr ellipse);
+
+    public static DimensionUnits GetEllipseCyUnits(IntPtr ellipse) =>
+        (DimensionUnits)svgparser_ellipse_get_cy_units(ellipse);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_ellipse_has_rx(IntPtr ellipse);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_ellipse_get_rx_measurement(IntPtr ellipse);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_ellipse_get_rx_units(IntPtr ellipse);
+
+    public static DimensionUnits GetEllipseRxUnits(IntPtr ellipse) =>
+        (DimensionUnits)svgparser_ellipse_get_rx_units(ellipse);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_ellipse_has_ry(IntPtr ellipse);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_ellipse_get_ry_measurement(IntPtr ellipse);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_ellipse_get_ry_units(IntPtr ellipse);
+
+    public static DimensionUnits GetEllipseRyUnits(IntPtr ellipse) =>
+        (DimensionUnits)svgparser_ellipse_get_ry_units(ellipse);
+
     // helper: marshal a returned const char* into a managed string
     public static string PtrToString(IntPtr ptr) =>
-        ptr == IntPtr.Zero ? null : Marshal.PtrToStringAnsi(ptr);
+        ptr == IntPtr.Zero ? string.Empty : Marshal.PtrToStringAnsi(ptr);
 
     // helper: drive the callback-based enumeration into a managed List<IntPtr>
     public static List<IntPtr> GetChildren(IntPtr entity) {

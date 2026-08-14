@@ -43,12 +43,12 @@ namespace Draw2d::Svg {
         std::array<float, 6> geometry;       // x1,y1,x2,y2 or cx,cy,r,fx,fy,fr
         GradientUnits enumGradientUnits;     // objectBoundingBox | userSpaceOnUse
         SpreadMethod enumSpreadMethod;       // pad | reflect | repeat
-        std::array<float,6> transform;      // gradientTransform
+        std::optional<std::array<float,6>> transform;      // gradientTransform
         std::vector<Stop<SvgColour>> stops;
         Core::String strHrefId;              // for xlink:href inheritance
 
         std::vector<Stop<SvgColour>> cloneStops() const;
-        std::array<float,6> cloneTransform() const;
+        std::optional<std::array<float,6>> cloneTransform() const;
     };
 
 }

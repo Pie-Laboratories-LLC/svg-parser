@@ -3,6 +3,12 @@
 #include "svg/SvgParser.hpp"
 #include "svg/SvgDocument.hpp"
 #include "svg/SvgContainerEntity.hpp"
+#include "svg/SvgDimensionedEntity.hpp"
+#include "svg/Rect.hpp"
+#include "svg/Group.hpp"
+#include "svg/Path.hpp"
+#include "svg/Circle.hpp"
+#include "svg/Ellipse.hpp"
 #include "core/Logger.hpp"
 
 using namespace Draw2d::Svg;
@@ -48,6 +54,14 @@ void svgparser_document_free(void* doc) {
 const void* svgparser_document_get_root(const void* doc) {
     try {
         return static_cast<const SvgDocument*>(doc)->getRootSvg();
+    } catch (...) {
+        return nullptr;
+    }
+}
+
+const char* svgparser_document_get_style(const void* doc) {
+    try {
+        return static_cast<const SvgDocument*>(doc)->getStyle().c_str();
     } catch (...) {
         return nullptr;
     }
@@ -105,9 +119,10 @@ int svgparser_gradient_get_spread_method(const void* gradient) {
 int svgparser_gradient_get_transform(const void* gradient, float* outBuffer6, int bufferSize) {
     try {
         const auto& tf = static_cast<const GradientTemplate*>(gradient)->transform;
-        int n = std::min<int>(bufferSize, static_cast<int>(tf.size()));
-        std::copy(tf.begin(), tf.begin() + n, outBuffer6);
-        return n;
+        if(!tf.has_value()) return 0;
+        int n = std::min<int>(bufferSize, static_cast<int>(tf.value().size()));
+        std::copy(tf.value().begin(), tf.value().begin() + n, outBuffer6);
+        return 1;
     } catch (...) { return 0; }
 }
 
@@ -149,7 +164,7 @@ const void* svgparser_stop_get_colour(const void* stop) {
     } catch (...) { return nullptr; }
 }
 
-const char* svgparser_entity_get_tag_name(const void* entity) {
+const char* svgparser_entity_get_type(const void* entity) {
     try {
         return static_cast<const SvgEntity*>(entity)->getType();
     } catch (...) {
@@ -352,6 +367,199 @@ const void* svgparser_colour_get_fallback(const void* colour) {
     } catch (...) { return nullptr; }
 }
 
+void* svgparser_entity_get_dimensioned(const void* entity) {
+    try {
+        return const_cast<void*>(static_cast<const void*>(
+            dynamic_cast<const SvgDimensionedEntity*>(static_cast<const SvgEntity*>(entity))));
+    } catch (...) { return nullptr; }
+}
+
+int svgparser_dimensionedentity_has_x(const void* dimensionedEntity) {
+    try {
+        return static_cast<const SvgDimensionedEntity*>(dimensionedEntity)->getX().has_value() ? 1 : 0;
+    } catch (...) { return 0; }
+}
+float svgparser_dimensionedentity_get_x_measurement(const void* dimensionedEntity) {
+    try {
+        return static_cast<const SvgDimensionedEntity*>(dimensionedEntity)->getX().value().fValue;
+    } catch (...) { return 0.0f; }
+}
+int svgparser_dimensionedentity_get_x_units(const void* dimensionedEntity) {
+    try {
+        return static_cast<int>(static_cast<const SvgDimensionedEntity*>(dimensionedEntity)->getX().value().enumUnits);
+    } catch (...) { return -1; }
+}
+
+int svgparser_dimensionedentity_has_y(const void* dimensionedEntity) {
+    try {
+        return static_cast<const SvgDimensionedEntity*>(dimensionedEntity)->getY().has_value() ? 1 : 0;
+    } catch (...) { return 0; }
+}
+float svgparser_dimensionedentity_get_y_measurement(const void* dimensionedEntity) {
+    try {
+        return static_cast<const SvgDimensionedEntity*>(dimensionedEntity)->getY().value().fValue;
+    } catch (...) { return 0.0f; }
+}
+int svgparser_dimensionedentity_get_y_units(const void* dimensionedEntity) {
+    try {
+        return static_cast<int>(static_cast<const SvgDimensionedEntity*>(dimensionedEntity)->getY().value().enumUnits);
+    } catch (...) { return -1; }
+}
+
+int svgparser_dimensionedentity_has_width(const void* dimensionedEntity) {
+    try {
+        return static_cast<const SvgDimensionedEntity*>(dimensionedEntity)->getWidth().has_value() ? 1 : 0;
+    } catch (...) { return 0; }
+}
+float svgparser_dimensionedentity_get_width_measurement(const void* dimensionedEntity) {
+    try {
+        return static_cast<const SvgDimensionedEntity*>(dimensionedEntity)->getWidth().value().fValue;
+    } catch (...) { return 0.0f; }
+}
+int svgparser_dimensionedentity_get_width_units(const void* dimensionedEntity) {
+    try {
+        return static_cast<int>(static_cast<const SvgDimensionedEntity*>(dimensionedEntity)->getWidth().value().enumUnits);
+    } catch (...) { return -1; }
+}
+
+int svgparser_dimensionedentity_has_height(const void* dimensionedEntity) {
+    try {
+        return static_cast<const SvgDimensionedEntity*>(dimensionedEntity)->getHeight().has_value() ? 1 : 0;
+    } catch (...) { return 0; }
+}
+float svgparser_dimensionedentity_get_height_measurement(const void* dimensionedEntity) {
+    try {
+        return static_cast<const SvgDimensionedEntity*>(dimensionedEntity)->getHeight().value().fValue;
+    } catch (...) { return 0.0f; }
+}
+int svgparser_dimensionedentity_get_height_units(const void* dimensionedEntity) {
+    try {
+        return static_cast<int>(static_cast<const SvgDimensionedEntity*>(dimensionedEntity)->getHeight().value().enumUnits);
+    } catch (...) { return -1; }
+}
+
+void* svgparser_entity_get_container(const void* entity) {
+    try {
+        return const_cast<void*>(static_cast<const void*>(
+            dynamic_cast<const SvgContainerEntity*>(static_cast<const SvgEntity*>(entity))));
+    } catch (...) { return nullptr; }
+}
+
+int svgparser_path_get_points_count(const void* path) {
+    try {
+        return static_cast<int>(static_cast<const Path*>(path)->getPoints().size());
+    } catch (...) { return 0; }
+}
+void svgparser_path_get_points(const void* path, float* buffer, int bufferSize) {
+    try {
+        auto pts = static_cast<const Path*>(path)->getPoints(); // by value per your getter
+        int n = std::min<int>(bufferSize, static_cast<int>(pts.size()));
+        std::copy(pts.begin(), pts.begin() + n, buffer);
+    } catch (...) {}
+}
+int svgparser_path_get_moves_count(const void* path) {
+    try {
+        return static_cast<int>(static_cast<const Path*>(path)->getPathMoves().size());
+    } catch (...) { return 0; }
+}
+void svgparser_path_get_moves(const void* path, int* buffer, int bufferSize) {
+    try {
+        auto moves = static_cast<const Path*>(path)->getPathMoves(); // by value
+        int n = std::min<int>(bufferSize, static_cast<int>(moves.size()));
+        for (int i = 0; i < n; ++i) buffer[i] = static_cast<int>(moves[i]);
+    } catch (...) {}
+}
+
+float svgparser_group_get_opacity(const void* group) {
+    try {
+        return static_cast<const Group*>(group)->getOpacity();
+    } catch (...) { return 1.0f; }
+}
+
+int svgparser_rect_has_rx(const void* rect) {
+    try { return static_cast<const Rect*>(rect)->getRx().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+float svgparser_rect_get_rx_measurement(const void* rect) {
+    try { return static_cast<const Rect*>(rect)->getRx().value().fValue; } catch (...) { return 0.0f; }
+}
+int svgparser_rect_get_rx_units(const void* rect) {
+    try { return static_cast<int>(static_cast<const Rect*>(rect)->getRx().value().enumUnits); } catch (...) { return -1; }
+}
+int svgparser_rect_has_ry(const void* rect) {
+    try { return static_cast<const Rect*>(rect)->getRy().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+float svgparser_rect_get_ry_measurement(const void* rect) {
+    try { return static_cast<const Rect*>(rect)->getRy().value().fValue; } catch (...) { return 0.0f; }
+}
+int svgparser_rect_get_ry_units(const void* rect) {
+    try { return static_cast<int>(static_cast<const Rect*>(rect)->getRy().value().enumUnits); } catch (...) { return -1; }
+}
+// --- Circle ---
+int svgparser_circle_has_cx(const void* circle) {
+    try { return static_cast<const Circle*>(circle)->getCx().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+float svgparser_circle_get_cx_measurement(const void* circle) {
+    try { return static_cast<const Circle*>(circle)->getCx().value().fValue; } catch (...) { return 0.0f; }
+}
+int svgparser_circle_get_cx_units(const void* circle) {
+    try { return static_cast<int>(static_cast<const Circle*>(circle)->getCx().value().enumUnits); } catch (...) { return -1; }
+}
+int svgparser_circle_has_cy(const void* circle) {
+    try { return static_cast<const Circle*>(circle)->getCy().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+float svgparser_circle_get_cy_measurement(const void* circle) {
+    try { return static_cast<const Circle*>(circle)->getCy().value().fValue; } catch (...) { return 0.0f; }
+}
+int svgparser_circle_get_cy_units(const void* circle) {
+    try { return static_cast<int>(static_cast<const Circle*>(circle)->getCy().value().enumUnits); } catch (...) { return -1; }
+}
+int svgparser_circle_has_r(const void* circle) {
+    try { return static_cast<const Circle*>(circle)->getR().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+float svgparser_circle_get_r_measurement(const void* circle) {
+    try { return static_cast<const Circle*>(circle)->getR().value().fValue; } catch (...) { return 0.0f; }
+}
+int svgparser_circle_get_r_units(const void* circle) {
+    try { return static_cast<int>(static_cast<const Circle*>(circle)->getR().value().enumUnits); } catch (...) { return -1; }
+}
+
+// --- Ellipse ---
+int svgparser_ellipse_has_cx(const void* ellipse) {
+    try { return static_cast<const Ellipse*>(ellipse)->getCx().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+float svgparser_ellipse_get_cx_measurement(const void* ellipse) {
+    try { return static_cast<const Ellipse*>(ellipse)->getCx().value().fValue; } catch (...) { return 0.0f; }
+}
+int svgparser_ellipse_get_cx_units(const void* ellipse) {
+    try { return static_cast<int>(static_cast<const Ellipse*>(ellipse)->getCx().value().enumUnits); } catch (...) { return -1; }
+}
+int svgparser_ellipse_has_cy(const void* ellipse) {
+    try { return static_cast<const Ellipse*>(ellipse)->getCy().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+float svgparser_ellipse_get_cy_measurement(const void* ellipse) {
+    try { return static_cast<const Ellipse*>(ellipse)->getCy().value().fValue; } catch (...) { return 0.0f; }
+}
+int svgparser_ellipse_get_cy_units(const void* ellipse) {
+    try { return static_cast<int>(static_cast<const Ellipse*>(ellipse)->getCy().value().enumUnits); } catch (...) { return -1; }
+}
+int svgparser_ellipse_has_rx(const void* ellipse) {
+    try { return static_cast<const Ellipse*>(ellipse)->getRx().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+float svgparser_ellipse_get_rx_measurement(const void* ellipse) {
+    try { return static_cast<const Ellipse*>(ellipse)->getRx().value().fValue; } catch (...) { return 0.0f; }
+}
+int svgparser_ellipse_get_rx_units(const void* ellipse) {
+    try { return static_cast<int>(static_cast<const Ellipse*>(ellipse)->getRx().value().enumUnits); } catch (...) { return -1; }
+}
+int svgparser_ellipse_has_ry(const void* ellipse) {
+    try { return static_cast<const Ellipse*>(ellipse)->getRy().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+float svgparser_ellipse_get_ry_measurement(const void* ellipse) {
+    try { return static_cast<const Ellipse*>(ellipse)->getRy().value().fValue; } catch (...) { return 0.0f; }
+}
+int svgparser_ellipse_get_ry_units(const void* ellipse) {
+    try { return static_cast<int>(static_cast<const Ellipse*>(ellipse)->getRy().value().enumUnits); } catch (...) { return -1; }
+}
 void svgparser_entity_enumerate_children(const void* entity, SvgEntityCallback callback, void* userData) {
     try {
         auto* pContainer = dynamic_cast<const SvgContainerEntity*>(static_cast<const SvgEntity*>(entity));

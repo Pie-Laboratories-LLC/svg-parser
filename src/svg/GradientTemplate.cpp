@@ -28,8 +28,10 @@ namespace Draw2d::Svg {
         return returnStops;
     }
 
-    std::array<float,6> GradientTemplate::cloneTransform() const
+    std::optional<std::array<float,6>> GradientTemplate::cloneTransform() const
     {
-        return Svg::duplicateMatrix6<float>(transform);
+        return transform.has_value()
+          ? std::optional<std::array<float,6>>(Svg::duplicateMatrix6<float>(transform.value()))
+          : std::nullopt;
     }
 }

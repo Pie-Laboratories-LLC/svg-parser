@@ -28,8 +28,8 @@ namespace Draw2d::Svg {
 
     struct SvgRectParams : public SvgEntityParams {
         SvgDimensionedParams svgDimensionedParams;
-        std::optional<Dimension> cx;
-        std::optional<Dimension> cy;
+        std::optional<Dimension> rx;
+        std::optional<Dimension> ry;
     };
 
     class Rect: public SvgEntity {
@@ -41,8 +41,8 @@ namespace Draw2d::Svg {
         Rect(SvgRectParams p)
             : SvgEntity(static_cast<SvgEntityParams &&>(p))
             , m_svgDimensionedEntity(std::move(p.svgDimensionedParams))
-            , m_cx(std::move(p.cx))
-            , m_cy(std::move(p.cy))
+            , m_rx(std::move(p.rx))
+            , m_ry(std::move(p.ry))
         {}
         virtual ~Rect() = default;
 
@@ -51,14 +51,14 @@ namespace Draw2d::Svg {
         std::optional<Dimension> getWidth() const  { return m_svgDimensionedEntity.getWidth(); }
         std::optional<Dimension> getHeight() const  { return m_svgDimensionedEntity.getHeight(); }
 
-        std::optional<Dimension> getCx() const { return m_cx; }
-        std::optional<Dimension> getCy() const { return m_cy; }
+        std::optional<Dimension> getRx() const { return m_rx; }
+        std::optional<Dimension> getRy() const { return m_ry; }
 
         virtual const char * const getType() const override { return "Rect"; }
     private:
         SvgDimensionedEntity m_svgDimensionedEntity;
-        std::optional<Dimension> m_cx;
-        std::optional<Dimension> m_cy;
+        std::optional<Dimension> m_rx;
+        std::optional<Dimension> m_ry;
     };
 
 }

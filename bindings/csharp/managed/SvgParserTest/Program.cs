@@ -3,14 +3,14 @@
 string svg = """
 <svg>
     <defs>
-      <linearGradient x1="0" y1="0" x2="1" y2="0">
+      <linearGradient id="lg" x1="0" y1="0" x2="1" y2="0">
         <stop offset="0" stop-color="#000000"/>
         <stop offset="1" stop-color="#ffffff"/>
       </linearGradient>
       <path id="p0defs" d="M0,0L10,0L10,10L0,10Z" fill="var(currentColor,#deadbeef)"/>
     </defs>
     
-    <g id="g1" transform="matrix(1 0 0 1 13 24)">
+    <g id="g1" transform="matrix(1 0 0 1 13 24)" fill="url(#lg)">
       <path id="p1" d="M0,0 L10,10" fill="#deadbeef" stroke-dasharray="1 3 4 2"/>
     </g>
 </svg>
@@ -37,7 +37,7 @@ try {
 
 void PrintEntity(IntPtr entity, int depth) {
     string id = SvgParserNative.PtrToString(SvgParserNative.svgparser_entity_get_id(entity));
-    string type = SvgParserNative.PtrToString(SvgParserNative.svgparser_entity_get_tag_name(entity));
+    string type = SvgParserNative.PtrToString(SvgParserNative.svgparser_entity_get_type(entity));
 
     int count = SvgParserNative.svgparser_entity_get_dash_array_count(entity);
     float[] dashArray = new float[count];
@@ -95,16 +95,62 @@ void PrintEntity(IntPtr entity, int depth) {
 void PrintPaint(IntPtr paint,string strName,int depth) {
     SvgColourType enumFillColourType = SvgParserNative.GetPaintColourType(paint);
     string colourDetails = "";
+    List<string> stops = new();
     switch(enumFillColourType) {
         case SvgColourType.Gradient:
             string gradientId = SvgParserNative.PtrToString(SvgParserNative.svgparser_paint_get_gradient_id(paint));
             colourDetails = gradientId;
+            var gradient = SvgParserNative.svgparser_document_lookup_gradient(doc,gradientId);
+            if(gradient != 0) {
+                float[] geometry = new float[6];
+                GradientKind gradientKind = SvgParserNative.GetGradientKind(gradient);
+                colourDetails += "; " + gradientKind + ". ";
+                GradientUnits gradientUnits = SvgParserNative.GetGradientUnits(gradient);
+                colourDetails += "; " + gradientUnits + ". ";
+                SpreadMethod spreadMethod = SvgParserNative.GetGradientSpreadMethod(gradient);
+                colourDetails += "; " + spreadMethod + ". ";
+                SvgParserNative.svgparser_gradient_get_geometry(gradient, geometry, geometry.Length);
+                if(gradientKind == GradientKind.Linear) {
+                    colourDetails += "x1: " + geometry[0];
+                    colourDetails += "; y1: " + geometry[1];
+                    colourDetails += "; x2: " + geometry[2];
+                    colourDetails += "; y2: " + geometry[3];
+                }
+                else {
+                    colourDetails += "cx: " + geometry[0];
+                    colourDetails += "; cy: " + geometry[1];
+                    colourDetails += "; r: " + geometry[2];
+                    colourDetails += "; fx: " + geometry[3];
+                    colourDetails += "; fy: " + geometry[4];
+                    colourDetails += "; fr: " + geometry[5];
+                }
+                float[] transform = new float[6];
+                if(SvgParserNative.svgparser_gradient_get_transform(gradient, transform, transform.Length) != 0) {
+                    colourDetails += "; xform = [" + String.Join(' ', transform) + ']';
+                }
+                string hrefId = SvgParserNative.PtrToString(SvgParserNative.svgparser_gradient_get_href_id(gradient));
+                colourDetails += "; href inherit = " + hrefId;
+                for(int i = 0; i < SvgParserNative.svgparser_gradient_get_stop_count(gradient); i++) {
+                    IntPtr stop = SvgParserNative.svgparser_gradient_get_stop(gradient, i);
+                    float offset = SvgParserNative.svgparser_stop_get_offset(stop);
+                    float opacity = SvgParserNative.svgparser_stop_get_offset(stop);
+                    IntPtr stopColour = SvgParserNative.svgparser_stop_get_colour(stop);
+                    SvgColourType colourType = SvgParserNative.GetColourColourType(stopColour);
+                    stops.Add (new string(' ', depth * 4 + 4) + "offset: " + offset
+                                        + " opacity: " + opacity + " colourType=" + colourType);
+                }
+            }
             break;
         default:
             IntPtr colour = SvgParserNative.svgparser_paint_get_colour(paint);
             PrintColour(colour,strName,depth);
             return;
-            break;
+    }
+    Console.WriteLine(new string(' ', depth * 4 + 2) + $"({strName}: {enumFillColourType}{(colourDetails.Length > 1 ? " - " + colourDetails : "")})");
+    if(stops.Count > 0) {
+        foreach(var line in stops) {
+            Console.WriteLine(line);
+        }
     }
 }
 
