@@ -71,7 +71,7 @@ void PrintEntity(IntPtr entity, int depth) {
         PrintPaint(strokePaint,"stroke", depth);
         float strokeOpacity = SvgParserNative.svgparser_entity_get_stroke_opacity(entity);
         Console.WriteLine(new string(' ', depth * 4 + 2) + $"(stroke opacity: {strokeOpacity})");
-        int strokeWidth = SvgParserNative.svgparser_entity_get_stroke_width(entity);
+        float strokeWidth = SvgParserNative.svgparser_entity_get_stroke_width(entity);
         Console.WriteLine(new string(' ', depth * 4 + 2) + $"(stroke width: {strokeWidth})");
         LineCap lineCap = SvgParserNative.GetLineCap(entity);
         Console.WriteLine(new string(' ', depth * 4 + 2) + $"(line cap: {lineCap})");
@@ -133,7 +133,7 @@ void PrintPaint(IntPtr paint,string strName,int depth) {
                 for(int i = 0; i < SvgParserNative.svgparser_gradient_get_stop_count(gradient); i++) {
                     IntPtr stop = SvgParserNative.svgparser_gradient_get_stop(gradient, i);
                     float offset = SvgParserNative.svgparser_stop_get_offset(stop);
-                    float opacity = SvgParserNative.svgparser_stop_get_offset(stop);
+                    float opacity = SvgParserNative.svgparser_stop_get_opacity(stop);
                     IntPtr stopColour = SvgParserNative.svgparser_stop_get_colour(stop);
                     SvgColourType colourType = SvgParserNative.GetColourColourType(stopColour);
                     stops.Add (new string(' ', depth * 4 + 4) + "offset: " + offset

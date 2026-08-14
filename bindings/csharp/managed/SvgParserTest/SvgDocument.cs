@@ -17,7 +17,7 @@ public class SvgDocument : IDisposable {
     public SvgEntity? lookupSvgEntity(string id) {
         IntPtr svgEntity = SvgParserNative.svgparser_document_lookup_svg_entity(_document,id);
         if(svgEntity != IntPtr.Zero) {
-            return new SvgEntity(svgEntity);
+            return SvgHelpers.MakeCorrectEntity(svgEntity);
         }
         return null;
     }

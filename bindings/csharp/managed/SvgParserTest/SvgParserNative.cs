@@ -113,7 +113,7 @@ internal static class SvgParserNative {
     public static extern float svgparser_entity_get_stroke_opacity(IntPtr entity);
 
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern int svgparser_entity_get_stroke_width(IntPtr entity);
+    public static extern float svgparser_entity_get_stroke_width(IntPtr entity);
 
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     private static extern int svgparser_entity_get_line_cap(IntPtr entity);
@@ -186,7 +186,7 @@ internal static class SvgParserNative {
     public static extern void svgparser_entity_enumerate_children(IntPtr entity, SvgEntityCallback callback, IntPtr userData);
 
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern int svgparser_entity_get_dimensioned(IntPtr entity); // does implement SvgDimensionedEntity?
+    public static extern IntPtr svgparser_entity_get_dimensioned(IntPtr entity); // does implement SvgDimensionedEntity?
 
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int svgparser_dimensionedentity_has_x(IntPtr dimensionedEntity); // does implement SvgDimensionedEntity?
@@ -237,12 +237,9 @@ internal static class SvgParserNative {
         (DimensionUnits)svgparser_dimensionedentity_get_height_units(paint);
 
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern int svgparser_entity_get_container(IntPtr entity); // does implement SvgDimensionedEntity?
+    public static extern IntPtr svgparser_entity_get_container(IntPtr entity); // does implement SvgContainerEntity?
 
     // --- Path ---
-    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern IntPtr svgparser_entity_as_path(IntPtr entity);
-
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int svgparser_path_get_points_count(IntPtr path);
 
@@ -269,15 +266,9 @@ internal static class SvgParserNative {
 
     // --- Group ---
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern IntPtr svgparser_entity_as_group(IntPtr entity);
-
-    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern float svgparser_group_get_opacity(IntPtr group);
 
     // --- Rect ---
-    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern IntPtr svgparser_entity_as_rect(IntPtr entity);
-
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int svgparser_rect_has_rx(IntPtr rect);
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
@@ -302,9 +293,6 @@ internal static class SvgParserNative {
         (DimensionUnits)svgparser_rect_get_ry_units(rect);
 
     // --- Circle ---
-    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern IntPtr svgparser_entity_as_circle(IntPtr entity);
-
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int svgparser_circle_has_cx(IntPtr circle);
 
@@ -343,9 +331,6 @@ internal static class SvgParserNative {
 
 
     // --- Ellipse ---
-    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern IntPtr svgparser_entity_as_ellipse(IntPtr entity);
-
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int svgparser_ellipse_has_cx(IntPtr ellipse);
 

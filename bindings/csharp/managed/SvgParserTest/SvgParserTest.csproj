@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-      <None Include="$(MSBuildProjectDirectory)../../../../../build/bindings/csharp/native/libsvgparser_c.so">
+      <None Include="$(MSBuildProjectDirectory)/../../../../build/bindings/csharp/native/libsvgparser_c.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>libsvgparser_c.so</Link>
     </None>
