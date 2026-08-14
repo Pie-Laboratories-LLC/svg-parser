@@ -1,3 +1,5 @@
+namespace PieLaboratories.Svg;
+
 public class SvgEntity {
     private IntPtr _entity;
     public SvgEntity(IntPtr entity) {

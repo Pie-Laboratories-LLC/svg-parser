@@ -1,3 +1,5 @@
+namespace PieLaboratories.Svg;
+
 public class Svg: SvgEntity, ISvgContainerEntity {
     private IntPtr _svg;
 

@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="SvgParser.Tests/SvgParser.Tests.csproj" />
+  <Project Path="SvgParser/SvgParser.csproj" />
+</Solution>

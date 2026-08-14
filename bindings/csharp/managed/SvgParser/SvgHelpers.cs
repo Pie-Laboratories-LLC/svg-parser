@@ -1,3 +1,5 @@
+namespace PieLaboratories.Svg;
+
 public static class SvgHelpers {
     public static List<SvgEntity> GetChildren(IntPtr container) {
         List<SvgEntity> toReturn = new();

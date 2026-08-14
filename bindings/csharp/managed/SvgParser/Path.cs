@@ -1,3 +1,5 @@
+namespace PieLaboratories.Svg;
+
 public class Path: SvgEntity {
     IntPtr _path;
     public Path(IntPtr path): base(path) {

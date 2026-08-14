@@ -1,3 +1,5 @@
+namespace PieLaboratories.Svg;
+
 public enum PathMove {
     NotAPathMove = -1,
     MoveTo,

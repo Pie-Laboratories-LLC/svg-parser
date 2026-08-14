@@ -1,3 +1,5 @@
+namespace PieLaboratories.Svg;
+
 public enum LineJoin {
     NotALineJoin = -1,
     Arcs,

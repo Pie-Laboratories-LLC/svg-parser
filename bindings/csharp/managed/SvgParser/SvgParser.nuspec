@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>SvgParser</id>
+    <version>$version$</version>
+    <title>SvgParser</title>
+    <authors>Pie Laboratories, LLC.</authors>
+    <owners>Pie Laboratories, LLC.</owners>
+    <description>Managed .NET bindings for the Pie Laboratories SvgParser C++ library. Parses SVG documents into an abstract syntax tree via a native P/Invoke shim (svgparser_c) over the C++23 svgparser library.</description>
+    <copyright>Copyright 2026 Pie Laboratories</copyright>
+    <license type="expression">Apache-2.0</license>
+    <projectUrl>https://github.com/Pie-Laboratories-LLC/svg-parser</projectUrl>
+    <repository type="git" url="https://github.com/Pie-Laboratories-LLC/svg-parser.git" />
+    <tags>svg parser xml interop native</tags>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <dependencies>
+      <group targetFramework="net10.0" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="bin/$configuration$/net10.0/SvgParser.dll" target="lib/net10.0/" />
+    <!-- svgparser_c is only built for Linux today; add further runtimes/<rid>/native
+         entries here once the native CMake build produces other platforms' binaries. -->
+    <file src="../../../../build/bindings/csharp/native/libsvgparser_c.so" target="runtimes/linux-x64/native/" />
+  </files>
+</package>

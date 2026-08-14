@@ -1,3 +1,5 @@
+namespace PieLaboratories.Svg;
+
 public class Circle: SvgEntity {
     private IntPtr _circle;
     public Circle(IntPtr circle): base(circle) {

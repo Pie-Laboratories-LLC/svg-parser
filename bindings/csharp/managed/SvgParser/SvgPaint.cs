@@ -1,3 +1,5 @@
+namespace PieLaboratories.Svg;
+
 public class SvgPaint {
     IntPtr _paint;
     public SvgPaint(IntPtr paint) {

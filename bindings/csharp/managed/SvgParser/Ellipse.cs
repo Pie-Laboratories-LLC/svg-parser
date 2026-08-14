@@ -1,3 +1,5 @@
+namespace PieLaboratories.Svg;
+
 public class Ellipse: SvgEntity {
     private IntPtr _ellipse;
     public Ellipse(IntPtr ellipse): base(ellipse) {

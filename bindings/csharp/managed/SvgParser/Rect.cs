@@ -1,3 +1,5 @@
+namespace PieLaboratories.Svg;
+
 public class Rect: SvgEntity, ISvgDimensionedEntity {
     private IntPtr _rect;
 

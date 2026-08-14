@@ -1,3 +1,5 @@
+namespace PieLaboratories.Svg;
+
 public class SvgParser {
     public static int init() {
         return SvgParserNative.svgparser_init();

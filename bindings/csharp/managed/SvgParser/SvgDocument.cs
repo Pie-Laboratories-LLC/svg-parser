@@ -1,3 +1,5 @@
+namespace PieLaboratories.Svg;
+
 public class SvgDocument : IDisposable {
     IntPtr _document;
 

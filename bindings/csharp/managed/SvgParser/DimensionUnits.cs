@@ -1,3 +1,5 @@
+namespace PieLaboratories.Svg;
+
 public enum DimensionUnits {
     NotADimensionUnit = -1,
     Percentage,

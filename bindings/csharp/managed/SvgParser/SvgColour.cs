@@ -1,3 +1,5 @@
+namespace PieLaboratories.Svg;
+
 public class SvgColour {
     private IntPtr _colour;
 

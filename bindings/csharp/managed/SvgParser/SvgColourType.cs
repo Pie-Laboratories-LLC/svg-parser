@@ -1,3 +1,5 @@
+namespace PieLaboratories.Svg;
+
 public enum SvgColourType {
     NotAnSvgColourType = -1,
     CurrentColor,

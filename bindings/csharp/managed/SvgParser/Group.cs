@@ -1,3 +1,5 @@
+namespace PieLaboratories.Svg;
+
 public class Group: SvgEntity, ISvgContainerEntity {
     private IntPtr _group;
     public Group(IntPtr group_): base(group_) {

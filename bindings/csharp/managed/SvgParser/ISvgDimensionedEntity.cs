@@ -1,3 +1,5 @@
+namespace PieLaboratories.Svg;
+
 public interface ISvgDimensionedEntity {
     Dimension? X { get; }
     Dimension? Y { get; }

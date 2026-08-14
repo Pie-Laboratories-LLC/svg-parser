@@ -1,3 +1,5 @@
+namespace PieLaboratories.Svg;
+
 public class Use: SvgEntity, ISvgContainerEntity, ISvgDimensionedEntity {
     private IntPtr _use;
     public Use(IntPtr use): base(use) {

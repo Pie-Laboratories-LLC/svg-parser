@@ -1,3 +1,5 @@
+namespace PieLaboratories.Svg;
+
 public readonly struct Dimension {
     public float Value { get; }
     public DimensionUnits Units { get; }
