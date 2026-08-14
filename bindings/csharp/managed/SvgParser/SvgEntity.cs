@@ -1,3 +1,19 @@
+/*
+ * Copyright 2026 Pie Laboratories
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 namespace PieLaboratories.Svg;
 
 public class SvgEntity {
@@ -18,7 +34,7 @@ public class SvgEntity {
     }
 
     virtual public SvgPaint FillColour => new SvgPaint(SvgParserNative.svgparser_entity_get_fill(_entity));
-    virtual public FillRule FillRulea => SvgParserNative.GetFillRule(_entity);
+    virtual public FillRule FillRule => SvgParserNative.GetFillRule(_entity);
     virtual public float FillOpacity => SvgParserNative.svgparser_entity_get_fill_opacity(_entity);
     virtual public SvgPaint StrokeColour => new SvgPaint(SvgParserNative.svgparser_entity_get_stroke(_entity));
     virtual public float StrokeOpacity => SvgParserNative.svgparser_entity_get_stroke_opacity(_entity);
@@ -36,5 +52,12 @@ public class SvgEntity {
     }
     virtual public string CssClass => SvgParserNative.PtrToString(SvgParserNative.svgparser_entity_get_css_class(_entity));
     virtual public string CssStyle => SvgParserNative.PtrToString(SvgParserNative.svgparser_entity_get_css_style(_entity));
-    virtual public string getType => SvgParserNative.PtrToString(SvgParserNative.svgparser_entity_get_type(_entity));
+    virtual public string Type => SvgParserNative.PtrToString(SvgParserNative.svgparser_entity_get_type(_entity));
+
+    virtual public bool IsDimensionedEntity {
+        get {
+            IntPtr dimensionedEntity = SvgParserNative.svgparser_entity_get_dimensioned(_entity);
+            return dimensionedEntity != IntPtr.Zero;
+        }
+    }
 }

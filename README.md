@@ -150,9 +150,8 @@ These are short-term goals:
 * make the XML abstraction layer less Xerces-shaped.  The abstraction layer was
   built from Xerces rather than the other way around.  Implementing for SAX2
   would be a real challenge (see planned SAX2 support below).
-* C# bindings.  The original genesis for this project was that at the time
-  there was a paucity of freely available SVG parsers for C#.  It must be
-  possible to use C#-native XML parsing with the SVG parser in C#.
+* Wire github actions to produce the nuget package containing c# bindings and
+  extend the build to include the mac runtime shared object.
 * support for `<text...>` elements.  I'm rendering fonts in 3D and this library
   allows me to render OT-SVG fonts, in particular, emojis.  So adding support
   for the `<text...>` element is essentially free.

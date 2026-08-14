@@ -36,6 +36,7 @@ pyvenv.cfg
 
 # c#
 obj/
+artifacts/
 
 # personal trauma
 oput

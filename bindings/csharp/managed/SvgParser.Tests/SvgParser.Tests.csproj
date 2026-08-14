@@ -16,6 +16,8 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <!-- PieLaboratories.Svg.Path otherwise collides with System.IO.Path (from ImplicitUsings). -->
+    <Using Include="PieLaboratories.Svg.Path" Alias="Path" />
   </ItemGroup>
 
   <ItemGroup>

@@ -289,7 +289,7 @@ namespace Draw2d::Svg {
     void SvgParser::__snagStyle(SvgParseState &svgParseState, Xml::IDomEntity *pStyleElement)
     {
         Core::String strTagName = Xml::String(pStyleElement->getTagName()).getTranscoded();
-        if(strTagName != SVG_NAME) throw SvgException("expected an <svg .../> tag, got {}", strTagName.c_str());
+        if(strTagName != STYLE_NAME) throw SvgException("expected a <style .../> tag, got {}", strTagName.c_str());
         svgParseState.svgDocument.appendStyle(pStyleElement->getTextContent());
     }
 
@@ -326,7 +326,7 @@ namespace Draw2d::Svg {
         }
         else if(strChildElementName == CIRCLE_NAME)
         {
-            cpSvgEntity = __parseEllipse(svgParseState, pChildElement, svgParserContext);
+            cpSvgEntity = __parseCircle(svgParseState, pChildElement, svgParserContext);
         }
         else if(m_callback) m_callback(SvgParserStatus::Warning, std::format("Unrecognized tag {}", strChildElementName));
 
