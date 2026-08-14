@@ -31,6 +31,9 @@ add_library(svgparser
 )
 add_library(svgparser::svgparser ALIAS svgparser)
 
+# src/CMakeLists.txt, on the svgparser target
+set_target_properties(svgparser PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 target_compile_features(svgparser PUBLIC cxx_std_23)
 
 # All internal headers are quoted relative to src/ itself (e.g.
@@ -50,8 +53,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 if(SVGPARSER_WITH_XERCES)
-    find_package(XercesC REQUIRED)
-
     target_sources(svgparser PRIVATE
         xml/XercesDomParserBuilder.cpp
         xml/XercesDomParser.cpp

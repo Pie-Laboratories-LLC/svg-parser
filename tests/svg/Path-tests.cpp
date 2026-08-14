@@ -38,28 +38,28 @@ TEST_CASE("Path::getX (HorizontalLineTo overload): pulls x from points, y from s
     Path path = makePath(doc, { 0.0f, 0.0f, 9.0f }, { PathMove::MoveTo, PathMove::HorizontalLineTo });
 
     REQUIRE(M.has_value());
-    REQUIRE( path.getX(2, 7.0f, std::nullopt, std::nullopt, M) == Catch::Approx(29.75f) );
+    REQUIRE( path.getX(2, 7.0f, M) == Catch::Approx(29.75f) );
 }
 
 TEST_CASE("Path::getX (HorizontalLineTo overload): nullptr matrix returns raw x, not y", "[svg-path]") {
     SvgDocument doc {};
     Path path = makePath(doc, { 0.0f, 0.0f, 9.0f }, { PathMove::MoveTo, PathMove::HorizontalLineTo });
 
-    REQUIRE( path.getX(2, 7.0f, std::nullopt, std::nullopt, std::nullopt) == Catch::Approx(9.0f) );
+    REQUIRE( path.getX(2, 7.0f, std::nullopt) == Catch::Approx(9.0f) );
 }
 
 TEST_CASE("Path::getY (VerticalLineTo overload): pulls y from points, x from supplied value", "[svg-path][regression]") {
     SvgDocument doc {};
     Path path = makePath(doc, { 0.0f, 0.0f, 11.0f }, { PathMove::MoveTo, PathMove::VerticalLineTo });
 
-    REQUIRE( path.getY(2, 3.0f, std::nullopt, std::nullopt, M) == Catch::Approx(54.5f) );
+    REQUIRE( path.getY(2, 3.0f, M) == Catch::Approx(54.5f) );
 }
 
 TEST_CASE("Path::getY (VerticalLineTo overload): nullptr matrix returns raw y, not x", "[svg-path]") {
     SvgDocument doc {};
     Path path = makePath(doc, { 0.0f, 0.0f, 11.0f }, { PathMove::MoveTo, PathMove::VerticalLineTo });
 
-    REQUIRE( path.getY(2, 3.0f, std::nullopt, std::nullopt, std::nullopt) == Catch::Approx(11.0f) );
+    REQUIRE( path.getY(2, 3.0f, std::nullopt) == Catch::Approx(11.0f) );
 }
 
 TEST_CASE("Path: throws if first path move is not MoveTo", "[svg-path][regression]") {

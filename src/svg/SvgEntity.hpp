@@ -76,10 +76,6 @@ namespace Draw2d::Svg {
         virtual const Draw2d::Point &getUpperLeft() const { return m_upperLeft; }
         virtual const Draw2d::Point &getLowerRight() const { return m_lowerRight; }
 
-        const std::optional<float> &getX() const { return m_fX; }
-        const std::optional<float> &getY() const { return m_fY; }
-        const std::optional<float> &getWidth() const { return m_fWidth; }
-        const std::optional<float> &getHeight() const { return m_fHeight; }
         const SvgPaint &getFillColour() const { return m_fillColour; }
         FillRule getFillRule() const { return m_enumFillRule; }
         float getFillOpacity() const { return m_fFillOpacity; }
@@ -90,6 +86,8 @@ namespace Draw2d::Svg {
         LineJoin getLineJoin() const { return m_enumLineJoin; }
         float getMiterLimit() const { return m_fMiterLimit; }
         const std::vector<float> getDashArray() const { return m_dashArray; }
+        const Core::String &getCssClass() const { return m_strCssClass; }
+        const Core::String &getCssStyle() const { return m_strCssStyle; }
         virtual const char * const getType() const { return "SvgEntity"; }
 
         SvgEntity(SvgEntityParams params);
@@ -106,10 +104,6 @@ namespace Draw2d::Svg {
         std::optional<std::array<float,6>> m_matrix { };
         Draw2d::Point m_upperLeft { std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
         Draw2d::Point m_lowerRight { std::numeric_limits<float>::min(), std::numeric_limits<float>::min() };
-        std::optional<float> m_fX = {};
-        std::optional<float> m_fY = {};
-        std::optional<float> m_fWidth = {};
-        std::optional<float> m_fHeight = {};
         SvgPaint m_fillColour { SvgColourType::None };
         float m_fFillOpacity = 1;
         FillRule m_enumFillRule = FillRule::NonZero;

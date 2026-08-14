@@ -45,9 +45,23 @@ if(NOT SVGPARSER_WITH_XERCES)
         "before disabling it.")
 endif()
 
+# Found here rather than in src/CMakeLists.txt so that the imported
+# XercesC::XercesC target is available to every subdirectory that needs it
+# (src, and bindings/csharp/native), not just whichever one happens to be
+# added first.
+if(SVGPARSER_WITH_XERCES)
+    find_package(XercesC REQUIRED)
+endif()
+
 add_subdirectory(src)
 
 if(SVGPARSER_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
+endif()
+
+option(SVGPARSER_WITH_CSHARP_BINDINGS "Build the C ABI shim for C# bindings" OFF)
+
+if(SVGPARSER_WITH_CSHARP_BINDINGS)
+    add_subdirectory(bindings/csharp/native)
 endif()

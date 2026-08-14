@@ -16,8 +16,8 @@ supports:
 * `<path>`, `<rect>`, `<group>`, `<use>`, `<ellipse>`, `<circle>`, `<defs>`
 * `<linearGradient>`, `<radialGradient>`
 * fill and stroke operations and "currentColor"
-* limited support for the CSS `swap()` primitive in colour attributes, e.g.
-  `fill="swap(--currentColor,#deadbeef)"`
+* limited support for the CSS `var()` primitive in colour attributes, e.g.
+  `fill="var(--currentColor,#deadbeef)"`
 * optional built-in support for Xerces XML parsing
 * support for XML namespaces (optional)
 * support for DTD validation (optional)

@@ -43,9 +43,9 @@ namespace Draw2d::Svg {
         SvgColourType getSvgColourType() const { return m_enumSvgColourType; }
         int getColourIndex() const { return m_nColourIndex; }
 
-        const std::optional<std::array<uint8_t,4>> &getBgrA() const { return (m_enumSvgColourType == SvgColourType::Bgr || m_enumSvgColourType == SvgColourType::BgrA) ? m_pBgra : throw new SvgException("SvgColourType is {}, not rgb(a);", SvgColourTypeToString(m_enumSvgColourType).c_str()); }
+        const std::optional<std::array<uint8_t,4>> &getBgrA() const { return (m_enumSvgColourType == SvgColourType::Bgr || m_enumSvgColourType == SvgColourType::BgrA) ? m_pBgra : throw SvgException("SvgColourType is {}, not rgb(a);", SvgColourTypeToString(m_enumSvgColourType).c_str()); }
 
-        const std::optional<std::array<float,4>> getHslA() const { return (m_enumSvgColourType == SvgColourType::Hsl || m_enumSvgColourType == SvgColourType::HslA) ? m_pHsla : throw new SvgException("SvgColourType is {}, not hsl(a);", SvgColourTypeToString(m_enumSvgColourType).c_str()); }
+        const std::optional<std::array<float,4>> getHslA() const { return (m_enumSvgColourType == SvgColourType::Hsl || m_enumSvgColourType == SvgColourType::HslA) ? m_pHsla : throw SvgException("SvgColourType is {}, not hsl(a);", SvgColourTypeToString(m_enumSvgColourType).c_str()); }
 
         SvgColour() { m_enumSvgColourType = SvgColourType::None; }
         SvgColour(SvgColourType svgColourType, int colourIndex, std::optional<std::array<uint8_t,4>> bgra, std::optional<std::array<float,4>> pHsla, std::unique_ptr<SvgColour> pFallback);

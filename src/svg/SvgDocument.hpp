@@ -109,6 +109,10 @@ namespace Draw2d::Svg {
             m_strStyle += cstrStyle;
         }
 
+        const Core::String &getStyle() const {
+            return m_strStyle;
+        }
+
         std::vector<const GradientTemplate *> getGradients() const {
             std::vector<const GradientTemplate *> toReturn {};
             std::transform(m_gradients.begin(), m_gradients.end(), std::back_inserter(toReturn),[](auto &g) {

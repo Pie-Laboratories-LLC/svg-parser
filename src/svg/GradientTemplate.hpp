@@ -18,7 +18,6 @@
 #define DRAW2D_GRADIENTTEMPLATE_DOT_HPP
 
 #include <array>
-#include <memory>
 
 #ifndef DRAW2D_GRADIENTUNITS_DOT_HPP
     #include "draw2d/GradientUnits.hpp"

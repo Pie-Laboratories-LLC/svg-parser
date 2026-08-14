@@ -187,10 +187,10 @@ namespace Draw2d::Svg {
         void setParserCallback(SvgParserCallback callback);
 
         std::unique_ptr<SvgDocument> parse(const Core::String &cstrSvgText
-                                                ,float fViewportWidth = DEFAULT_VIEWPORT_SIZE
-                                                ,float fViewportHeight = DEFAULT_VIEWPORT_SIZE
-                                                ,bool bWithNamespace = false
-                                                ,bool bWithValidation = false);
+                                          ,float fViewportWidth = DEFAULT_VIEWPORT_SIZE
+                                          ,float fViewportHeight = DEFAULT_VIEWPORT_SIZE
+                                          ,bool bWithNamespace = false
+                                          ,bool bWithValidation = false);
 
         static std::regex SvgRgbRegex;
         static std::regex SvgHslRegex;
