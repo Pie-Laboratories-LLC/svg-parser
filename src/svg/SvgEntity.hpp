@@ -44,6 +44,7 @@ namespace Draw2d::Svg {
 
     class Svg;
     class SvgDocument;
+    class SvgDimensionedEntity;
 
     struct SvgEntityParams {
         SvgDocument &svgDocument;
@@ -90,6 +91,11 @@ namespace Draw2d::Svg {
         const Core::String &getCssStyle() const { return m_strCssStyle; }
         virtual const char * const getType() const { return "SvgEntity"; }
 
+        // Non-null only for entities that compose an SvgDimensionedEntity (Rect, Svg, Use);
+        // there's no inheritance relationship to dynamic_cast through, so this is the
+        // supported way to get from an SvgEntity to its dimensioned sub-object, if any.
+        virtual const SvgDimensionedEntity *getDimensionedEntity() const { return nullptr; }
+
         SvgEntity(SvgEntityParams params);
         SvgEntity(const SvgEntity &copy) = default;
         SvgEntity &operator = (const SvgEntity &copy) = delete;
@@ -109,7 +115,7 @@ namespace Draw2d::Svg {
         FillRule m_enumFillRule = FillRule::NonZero;
         SvgPaint m_strokeColour { SvgColourType::None };
         float m_fStrokeOpacity = 1;
-        int m_fStrokeWidth = 1;
+        float m_fStrokeWidth = 1;
         LineCap m_enumLineCap = LineCap::Butt;
         LineJoin m_enumLineJoin = LineJoin::Miter;
         float m_fMiterLimit = 4.0f;

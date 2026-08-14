@@ -55,6 +55,7 @@ namespace Draw2d::Svg {
         std::optional<Dimension> getRy() const { return m_ry; }
 
         virtual const char * const getType() const override { return "Rect"; }
+        const SvgDimensionedEntity *getDimensionedEntity() const override { return &m_svgDimensionedEntity; }
     private:
         SvgDimensionedEntity m_svgDimensionedEntity;
         std::optional<Dimension> m_rx;

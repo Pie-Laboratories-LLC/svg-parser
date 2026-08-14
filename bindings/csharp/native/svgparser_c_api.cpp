@@ -69,7 +69,7 @@ const char* svgparser_document_get_style(const void* doc) {
 
 const void* svgparser_document_lookup_svg_entity(const void* doc, const char* id) {
     try {
-        // NOTE: adjust if IDomDocument::getElementById lives elsewhere in your real API —
+        // NOTE: adjust if IDomDocument::getElementById lives elsewhere in your real API ï¿½
         // this assumes SvgDocument exposes an equivalent lookup for SvgEntity, not IDomEntity.
         return static_cast<const SvgDocument*>(doc)->lookupSvgEntity(id);
     } catch (...) {
@@ -212,7 +212,7 @@ int svgparser_entity_get_render(const void* entity)
 float svgparser_entity_get_fill_opacity(const void* entity)
 {
     try {
-        return static_cast<int>(static_cast<const SvgEntity*>(entity)->getFillOpacity());
+        return static_cast<const SvgEntity*>(entity)->getFillOpacity();
     } catch (...) { return 0; }
 }
 
@@ -226,14 +226,14 @@ int svgparser_entity_get_fill_rule(const void* entity)
 float svgparser_entity_get_stroke_opacity(const void* entity)
 {
     try {
-        return static_cast<int>(static_cast<const SvgEntity*>(entity)->getStrokeOpacity());
+        return static_cast<const SvgEntity*>(entity)->getStrokeOpacity();
     } catch (...) { return 0; }
 }
 
-int svgparser_entity_get_stroke_width(const void* entity)
+float svgparser_entity_get_stroke_width(const void* entity)
 {
     try {
-        return static_cast<int>(static_cast<const SvgEntity*>(entity)->getStrokeWidth());
+        return static_cast<const SvgEntity*>(entity)->getStrokeWidth();
     } catch (...) { return 0; }
 }
 
@@ -254,7 +254,7 @@ int svgparser_entity_get_line_join(const void* entity)
 float svgparser_entity_get_miter_limit(const void* entity)
 {
     try {
-        return static_cast<int>(static_cast<const SvgEntity*>(entity)->getMiterLimit());
+        return static_cast<const SvgEntity*>(entity)->getMiterLimit();
     } catch (...) { return 0; }
 }
 
@@ -370,7 +370,7 @@ const void* svgparser_colour_get_fallback(const void* colour) {
 void* svgparser_entity_get_dimensioned(const void* entity) {
     try {
         return const_cast<void*>(static_cast<const void*>(
-            dynamic_cast<const SvgDimensionedEntity*>(static_cast<const SvgEntity*>(entity))));
+            static_cast<const SvgEntity*>(entity)->getDimensionedEntity()));
     } catch (...) { return nullptr; }
 }
 
@@ -563,11 +563,11 @@ int svgparser_ellipse_get_ry_units(const void* ellipse) {
 void svgparser_entity_enumerate_children(const void* entity, SvgEntityCallback callback, void* userData) {
     try {
         auto* pContainer = dynamic_cast<const SvgContainerEntity*>(static_cast<const SvgEntity*>(entity));
-        if (!pContainer) return; // not a container type — no children
+        if (!pContainer) return; // not a container type ï¿½ no children
         for (const SvgEntity* pChild : pContainer->enumerateChildren()) {
             callback(pChild, userData);
         }
     } catch (...) {
-        // swallow — cannot propagate a C++ exception across the C boundary
+        // swallow ï¿½ cannot propagate a C++ exception across the C boundary
     }
 }

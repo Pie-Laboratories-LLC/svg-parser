@@ -53,7 +53,7 @@ SVGPARSER_API int svgparser_entity_get_render(const void* entity); // returns 1 
 SVGPARSER_API float svgparser_entity_get_fill_opacity(const void* entity);
 SVGPARSER_API int svgparser_entity_get_fill_rule(const void* entity);
 SVGPARSER_API float svgparser_entity_get_stroke_opacity(const void* entity);
-SVGPARSER_API int svgparser_entity_get_stroke_width(const void* entity);
+SVGPARSER_API float svgparser_entity_get_stroke_width(const void* entity);
 SVGPARSER_API int svgparser_entity_get_line_cap(const void* entity);
 SVGPARSER_API int svgparser_entity_get_line_join(const void* entity);
 SVGPARSER_API float svgparser_entity_get_miter_limit(const void* entity);

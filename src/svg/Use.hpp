@@ -46,6 +46,7 @@ namespace Draw2d::Svg {
         std::optional<Dimension> getY() const { return m_svgDimensionedEntity.getY(); }
         std::optional<Dimension> getWidth() const { return m_svgDimensionedEntity.getWidth(); }
         std::optional<Dimension> getHeight() const { return m_svgDimensionedEntity.getHeight(); }
+        const SvgDimensionedEntity *getDimensionedEntity() const override { return &m_svgDimensionedEntity; }
 
         virtual const SvgEntity *addChild(std::unique_ptr<SvgEntity> pSvgEntity) override {
             if(m_pSvgEntity) throw SvgException("addChild called when Use's child is already set!");

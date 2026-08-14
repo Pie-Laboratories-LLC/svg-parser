@@ -246,3 +246,37 @@ things I'm working hard on at the time of this writing:
 The project has grand scope and a million different things to work on and no
 particular concrete goals.  Progress will be tracked on YouTube, and I may
 release other portions as open source projects.
+
+# ARTIFICIAL INTELLIGENCE
+
+I have used claude by Anthropic to assist with this project.  I generally
+interact with claude through the browser in preference to claude code.  Claude
+code can be a little aggressive for my tastes.  My philosophy has gotten to be
+that I am the one who writes the code; Browser claude does research and
+ocaissionally implements code.  I frequently submit my code to browser claude
+for review.  It's an excellent way to catch issues that would otherwise surface
+when compiling - or running if I'm being completely honest.
+
+I feel AI represents a substantive improvement on search engines.  For problems
+that are well-known, have been solved for a long time with lots of public
+references - e.g., public github repositories, AI is a true godsend.  Previously
+I would go on these forays searching for something, find a stack overflow post
+or codeproject post, copy and paste and specialize it, and then frequently have
+to go through copying and pasting the solution.  AI has been brilliant for
+solving these sorts of problems.
+
+I do use claude code, too, but in a much limited way.  For the larger project,
+for instance, I rely on many third party libraries: xerces, icu, libpng,
+freetype, etc..  I was able to clone and build those repositories one at a time
+as I needed them.  As I got more serious about development, it made sense to
+move to WSL.  To support this, I had claude code make the build system for the
+third party libraries.  It ensured the flags were correct, things built
+correctly in a repeatable fashion and saved me the considerable bother and
+expenditure of time.  Claude code did it in an hour where it would have taken me
+days.
+
+For this project, specifically, as mentioned, browser claude generated Slice and
+Splice templates.  Browser claude developed the svgs and most of the unit tests
+around SvgParser and SvgDParser.  Finally, claude code found and fixed some
+issues with the P/invoke wrappers for the c# bindings and generated the xunit
+project and unit tests associated with the SvgParser nuget package.

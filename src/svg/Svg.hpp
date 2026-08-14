@@ -60,6 +60,7 @@ namespace Draw2d::Svg {
         std::optional<Dimension> getY() const { return m_svgDimensionedEntity.getY(); }
         std::optional<Dimension> getWidth() const { return m_svgDimensionedEntity.getWidth(); }
         std::optional<Dimension> getHeight() const { return m_svgDimensionedEntity.getHeight(); }
+        const SvgDimensionedEntity *getDimensionedEntity() const override { return &m_svgDimensionedEntity; }
         std::optional<Viewbox> getViewbox() const { return m_viewbox; }
         void setViewbox(Viewbox viewbox) { m_viewbox = viewbox; }
         PreserveAspectRatio m_preserveAspectRatio() const { return m_enumPreserveAspectRatio; }
