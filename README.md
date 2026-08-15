@@ -1,8 +1,10 @@
 # INTRODUCTION
 
-This is an SVG Parser written in C++.  In the very near future it will include
-C# bindings.  It's part of a much larger project that includes 2D and 3D
-rendering engines written from scratch.  It's a lifelong passion project.
+This is an SVG Parser written in C++.  This includes c# bindings used to create
+the [Pie Laboratories, LLC Svg Parser nuget
+package](https://www.nuget.org/packages/PieLaboratories.SvgParser/).  It's part
+of a much larger project that includes 2D and 3D rendering engines written from
+scratch.  It's a lifelong passion project.
 
 The SVG Parser creates an abstract syntax tree from an SVG document.  Parse-time
 resolution is performed on fill="currentColor"-style attributes, inherited
@@ -73,11 +75,13 @@ transformation matrix.  These are things only knowable at render time.
 
 The main SvgParser is in the class src/svg/SvgParser.cpp.  It's straightforward
 as far as parsers go, I'm not using flex/bison or ANTLR, I use regular
-expressions, which more than suffice for SVG.
+expressions, which more than suffice for SVG.  The class reads through the
+header in approximately the same order elements are encountered when reading
+through an svg document itself.
 
 The xml parser is in src/xml; it's a little obfuscated for abstraction around
-xerces.  The Xerces implementation is clearly implemented in classes starting
-Xerces.
+xerces.  The Xerces implementation is clearly implemented in classes named
+starting with Xerces.
 
 The actual xml parsing is a very small part of the application.  I chose DOM
 because I was only interested in OT-SVG svg glyphs, but see the
@@ -458,3 +462,8 @@ project and unit tests associated with the SvgParser nuget package.
 
 Browser claude has also generated the [CYGWIN NOTE](#cygwin-note) and
 [ERROR REPORTING](#error-reporting) sections of this document.
+
+I am looking to have Claude Code generate a website for Pie Laboratories LLC,
+according to my specification.  Although I enjoy web development quite a lot
+and would love to implement it myself, the larger project has too many things
+on the TODO list.
