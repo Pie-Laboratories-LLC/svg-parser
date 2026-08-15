@@ -47,8 +47,6 @@ optional.  See [Alternatives to Xerces](#alternatives-to-xerces) and
   includes the href, but the inheritance mechanism is not implemented.
 * there's currently no provision for looking up colors specified via
 `--colorN`.  Colours using this pattern are preserved in the AST.
-* SvgParser includes a callback mechanism for being notified of errors.  The
-  callback mechanism is not implemented in the c# bindings.
 
 # IMPLEMENTATION NOTES
 The SvgParser creates an abstract syntax tree.  It doesn't strictly look like a
@@ -189,8 +187,8 @@ or run the Catch2 executable directly:
 
 ## EXAMPLES - C++
 
-The best source for examples is SvgParser-tests.cpp.  Here is the content of example.cpp with the compilation
-command below:
+The best source for examples is SvgParser-tests.cpp.  Here is the content of
+`samples/cplusplus/simple.cpp` with the compilation command below:
 
 ```c++
 #include <iostream>
@@ -242,8 +240,8 @@ g++ -o example.exe -std=c++23 -fcoroutines -I src example.cpp -lxerces-c -lstdc+
 
 ## EXAMPLES - CSHARP
 
-The following is the simple.cs example from samples/csharp, with the compilation command below.  It is
-analogous to the C++ example above:
+The following is the simple.cs example from `samples/csharp`, with the
+compilation command below.  It is analogous to the C++ example above:
 
 ```csharp
 #:package PieLaboratories.SvgParser@1.0.0-alpha01
