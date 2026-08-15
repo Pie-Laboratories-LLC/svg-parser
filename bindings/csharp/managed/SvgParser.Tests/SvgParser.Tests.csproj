@@ -24,12 +24,20 @@
     <ProjectReference Include="..\SvgParser\SvgParser.csproj" />
   </ItemGroup>
 
+  <Target Name="PrintOS" BeforeTargets="Build">
+    <Message Importance="high" Text="OS is: $(OS)" />
+  </Target>
+
   <ItemGroup>
-    <!-- ProjectReference doesn't propagate CopyToOutputDirectory items from SvgParser.csproj,
-         so the test host needs its own copy of the native shim to resolve the DllImports. -->
-    <None Include="$(MSBuildProjectDirectory)/../../../../build/bindings/csharp/native/libsvgparser_c.so">
+    <None Include="$(MSBuildProjectDirectory)/../../../../build/bindings/csharp/native/libsvgparser_c.so"
+          Condition="!$([MSBuild]::IsOSPlatform('Windows'))">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>libsvgparser_c.so</Link>
+    </None>
+    <None Include="$(MSBuildProjectDirectory)/../../../../build/bindings/csharp/native/libsvgparser_c.dll"
+          Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>svgparser_c.dll</Link>
     </None>
   </ItemGroup>
 
