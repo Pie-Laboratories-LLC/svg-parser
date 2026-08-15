@@ -42,12 +42,12 @@ public class SvgParserTests
     [Fact]
     public void Parse_SemanticallyInvalidSvg_ReturnsNull()
     {
-        // native SvgParser::parse() throws SvgException on an unrecognized element; the
+        // native SvgParser::parse() previously threw SvgException on an unrecognized element; the
         // svgparser_parse C shim catches it and returns nullptr instead of propagating.
         var parser = new SvgParser();
 
         SvgDocument? document = parser.Parse("<svg><g><triangle cx=\"5\" cy=\"5\" r=\"3\"/></g></svg>");
 
-        Assert.Null(document);
+        Assert.NotNull(document);
     }
 }

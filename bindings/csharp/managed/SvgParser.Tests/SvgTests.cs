@@ -38,7 +38,7 @@ public class SvgTests : IDisposable
     [Fact]
     public void Dimensions_ReturnSetValues()
     {
-        Svg root = _document.getRoot();
+        Svg root = _document.RootSvg;
 
         Assert.Equal(1f, root.X!.Value.Value);
         Assert.Equal(2f, root.Y!.Value.Value);
@@ -49,7 +49,7 @@ public class SvgTests : IDisposable
     [Fact]
     public void EnumerateChildren_ReturnsChildrenInDocumentOrder()
     {
-        List<SvgEntity> children = _document.getRoot().enumerateChildren();
+        List<SvgEntity> children = _document.RootSvg.enumerateChildren();
 
         Assert.Equal(["p1", "p2"], children.Select(c => c.Id));
     }

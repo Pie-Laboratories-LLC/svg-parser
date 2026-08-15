@@ -38,7 +38,7 @@ public class SvgHelpersTests
             </svg>
             """);
 
-        Svg root = document.getRoot();
+        Svg root = document.RootSvg;
         var parent = (Group)root.enumerateChildren().Single(c => c.Id == "parent");
         List<SvgEntity> children = parent.enumerateChildren();
 

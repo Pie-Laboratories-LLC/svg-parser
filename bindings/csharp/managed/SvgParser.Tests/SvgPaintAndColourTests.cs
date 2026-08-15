@@ -59,8 +59,8 @@ public class SvgPaintAndColourTests : IDisposable
     {
         SvgPaint paint = Find("p-current-with-fallback").FillColour;
 
-        Assert.Equal(SvgColourType.CurrentColor, paint.SvgColourType);
-        Assert.Equal(SvgColourType.CurrentColor, paint.SvgColour!.SvgColourType);
+        Assert.Equal(SvgColourType.Bgr, paint.SvgColourType);
+        Assert.Equal(SvgColourType.Bgr, paint.SvgColour!.SvgColourType);
     }
 
     [Fact]

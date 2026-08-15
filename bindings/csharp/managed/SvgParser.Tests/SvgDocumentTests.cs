@@ -26,7 +26,7 @@ public class SvgDocumentTests
     {
         using SvgDocument document = TestSvg.Parse("<svg><path id=\"p1\" d=\"M0,0 L1,1 Z\"/></svg>");
 
-        Svg root = document.getRoot();
+        Svg root = document.RootSvg;
 
         Assert.Equal("Svg", root.Type);
     }
@@ -41,7 +41,7 @@ public class SvgDocumentTests
             </svg>
             """);
 
-        Assert.Contains("my-class", document.getStyle());
+        Assert.Contains("my-class", document.Style);
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public class SvgDocumentTests
     {
         using SvgDocument document = TestSvg.Parse("<svg><path id=\"p1\" d=\"M0,0 L1,1 Z\"/></svg>");
 
-        Assert.Equal(string.Empty, document.getStyle());
+        Assert.Equal(string.Empty, document.Style);
     }
 
     [Fact]

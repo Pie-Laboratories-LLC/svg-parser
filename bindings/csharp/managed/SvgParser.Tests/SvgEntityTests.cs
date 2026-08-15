@@ -37,14 +37,14 @@ public class SvgEntityTests : IDisposable
                     transform="matrix(1 0 0 1 13 24)"
                     fill="#112233" fill-opacity="0.25" fill-rule="evenodd"
                     stroke="#445566" stroke-opacity="0.75" stroke-width="3.5"
-                    stroke-linecap="round" stroke-linejoin="Bevel" stroke-miterlimit="2.5"
+                    stroke-linecap="round" stroke-linejoin="bevel" stroke-miterlimit="2.5"
                     stroke-dasharray="1 3 4 2"
                     class="my-class" style="opacity:1"/>
               <path id="p-bare" d="M0,0 L1,1 Z"/>
             </svg>
             """);
 
-        Svg root = _document.getRoot();
+        Svg root = _document.RootSvg;
         _full = root.enumerateChildren().Single(c => c.Id == "p-full");
         _bare = root.enumerateChildren().Single(c => c.Id == "p-bare");
         _inDefs = _document.lookupSvgEntity("p-in-defs")!;
