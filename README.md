@@ -183,6 +183,36 @@ or run the Catch2 executable directly:
 ./build/tests/svgparser_tests
 ```
 
+## CYGWIN NOTE
+
+Building the Windows shared object for the C# bindings from within Cygwin
+requires cross-compiling with MinGW-w64, not Cygwin's native GCC. A few
+things that aren't obvious from a plain `cmake -S . -B build`:
+
+* Don't rely on `CMAKE_PREFIX_PATH` alone to point at a MinGW-packaged
+  dependency (e.g. `mingw64-x86_64-xerces-c`) ¿ this widens *every* header
+  search path and can leak MinGW-targeted headers into a Cygwin-native
+  compile, producing `#error Only Win32 target is supported!`. Use an
+  explicit toolchain file instead, setting `CMAKE_C_COMPILER`/
+  `CMAKE_CXX_COMPILER` to the `x86_64-w64-mingw32-*` cross-compiler and
+  `CMAKE_FIND_ROOT_PATH` to the MinGW sysroot (see `mingw-toolchain.cmake`
+  in the repo root for a working example).
+* Pass `-DSVGPARSER_WITH_CSHARP_BINDINGS=ON` explicitly ¿ without it, only
+  the static `svgparser` library builds; the `svgparser_c` shared object
+  (the actual DLL the NuGet package needs) is skipped entirely.
+* CTest may fail to auto-run the cross-compiled `.exe` test binary during
+  the build itself (`Result: 127`) since Cygwin's shell won't have the
+  MinGW runtime DLLs on `PATH`. This is expected and harmless ¿ it doesn't
+  affect whether the library/DLL themselves built correctly.
+
+Full command:
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_TOOLCHAIN_FILE=mingw-toolchain.cmake \
+  -DSVGPARSER_WITH_CSHARP_BINDINGS=ON
+cmake --build build -j$(nproc)
+```
+
 # EXAMPLES
 
 ## EXAMPLES - C++
@@ -425,3 +455,6 @@ Splice templates.  Browser claude developed the svgs and most of the unit tests
 around SvgParser and SvgDParser.  Finally, claude code found and fixed some
 issues with the P/invoke wrappers for the c# bindings and generated the xunit
 project and unit tests associated with the SvgParser nuget package.
+
+Browser claude has also generated the [CYGWIN NOTE](#cygwin-note) and
+[ERROR REPORTING](#error-reporting) sections of this document.
