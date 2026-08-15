@@ -24,11 +24,11 @@
 namespace Draw2d::Svg {
 
 #define NOTALINEJOIN "NotALineJoin"
-#define ARCS         "Arcs"
-#define BEVEL        "Bevel"
-#define MITER        "Miter"
-#define MITERCLIP    "MiterClip"
-#define ROUND        "Round"
+#define ARCS         "arcs"
+#define BEVEL        "bevel"
+#define MITER        "miter"
+#define MITERCLIP    "miterClip"
+#define ROUND        "round"
 
     LineJoin ParseLineJoin(const Core::String &cstrLineJoin)
     {

@@ -51,6 +51,33 @@ void svgparser_document_free(void* doc) {
     delete static_cast<SvgDocument*>(doc); // reclaims what .release() gave up
 }
 
+void* svgparser_parser_create() {
+    try {
+        return new SvgParser();
+    } catch (...) { return nullptr; }
+}
+
+void svgparser_parser_free(void* parser) {
+    delete static_cast<SvgParser*>(parser);
+}
+
+void* svgparser_parser_parse(void* parser, const char* svgText) {
+    try {
+        std::unique_ptr<SvgDocument> doc = static_cast<SvgParser*>(parser)->parse(svgText);
+        return doc.release();
+    } catch (...) { return nullptr; }
+}
+
+void svgparser_set_parser_callback(void* parser, SvgParserErrorCallback callback, void* userData) {
+    try {
+        static_cast<SvgParser*>(parser)->setParserCallback(
+            [callback, userData](SvgParserStatus status, const Core::String& msg) {
+                callback(static_cast<int>(status), msg.c_str(), userData);
+            }
+        );
+    } catch (...) {}
+}
+
 const void* svgparser_document_get_root(const void* doc) {
     try {
         return static_cast<const SvgDocument*>(doc)->getRootSvg();

@@ -28,7 +28,7 @@ public class SvgDocumentTests
 
         Svg root = document.getRoot();
 
-        Assert.Equal("Svg", root.getType);
+        Assert.Equal("Svg", root.Type);
     }
 
     [Fact]

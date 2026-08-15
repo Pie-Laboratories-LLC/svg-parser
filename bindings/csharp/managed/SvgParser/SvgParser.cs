@@ -16,25 +16,43 @@
 
 namespace PieLaboratories.Svg;
 
-public class SvgParser {
-    public static int init() {
-        return SvgParserNative.svgparser_init();
+using System.Runtime.InteropServices;
+
+public class SvgParser : IDisposable {
+    private IntPtr _handle;
+    private GCHandle _callbackHandle;
+    private SvgParserNative.ParserErrorCallback? _errorCallback;
+
+    public event Action<SvgParserStatus, string>? OnParseError;
+
+    public static int init() => SvgParserNative.svgparser_init();
+    public static void shutdown() => SvgParserNative.svgparser_shutdown();
+
+    public SvgParser() {
+        _handle = SvgParserNative.svgparser_parser_create();
+        if (_handle == IntPtr.Zero) throw new Exception("Failed to create native SvgParser.");
     }
 
-    public static void shutdown()
-    {
-        SvgParserNative.svgparser_shutdown();
+    public void EnableErrorReporting() {
+        _errorCallback = (status, msgPtr, userData) =>
+            OnParseError?.Invoke((SvgParserStatus)status, SvgParserNative.PtrToString(msgPtr));
+        _callbackHandle = GCHandle.Alloc(_errorCallback);
+        SvgParserNative.svgparser_set_parser_callback(_handle, _errorCallback, IntPtr.Zero);
     }
 
-    // null on parse failure: svgparser_parse() returns nullptr, and every SvgDocument
-    // method calls a (non-virtual, but this-dereferencing) member function on the native
-    // pointer -- wrapping a null pointer here would crash the process on first use rather
-    // than surfacing a catchable error.
-    public SvgDocument? Parse(string svgText)
-    {
-        IntPtr document = SvgParserNative.svgparser_parse(svgText);
+    public SvgDocument? Parse(string svgText) {
+        IntPtr document = SvgParserNative.svgparser_parser_parse(_handle, svgText);
         if (document == IntPtr.Zero) return null;
+        return new SvgDocument(document);
+    }
 
-        return new SvgDocument (document);
+    public void Dispose() {
+        if (_handle != IntPtr.Zero) {
+            SvgParserNative.svgparser_parser_free(_handle);
+            _handle = IntPtr.Zero;
+        }
+        if (_callbackHandle.IsAllocated) {
+            _callbackHandle.Free();
+        }
     }
 }

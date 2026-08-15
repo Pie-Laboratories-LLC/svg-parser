@@ -67,6 +67,9 @@ string svgText = """
       <path id="nestedPath" d="M1,1 L2,2" fill="#123456"/>
     </g>
 
+    <!-- text isn't currently supported: this demonstrates the error event -->
+    <text id="t1">hello</text>
+
   </g>
 </svg>
 """;
@@ -74,23 +77,27 @@ string svgText = """
 SvgParser.init();
 
 try {
-    SvgParser svgParser = new();
-    using(SvgDocument? svgDocument = svgParser.Parse(svgText))
-    {
-        if (svgDocument == null) throw new Exception("SVG document didn't parse.");
-        var root = svgDocument.getRoot();
-        foreach (SvgEntity svgEntity in root.enumerateChildren())
-        {
-            var messages = dumpEntity(svgDocument, svgEntity);
+    using SvgParser svgParser = new();
 
-            Console.WriteLine(string.Join("\n", messages));
-        }
+    svgParser.EnableErrorReporting();
+    svgParser.OnParseError += (status, msg) => Console.WriteLine($"[PARSE CALLBACK] {status}: {msg}");
+
+    using SvgDocument? svgDocument = svgParser.Parse(svgText);
+
+    if (svgDocument == null) throw new Exception("SVG document didn't parse.");
+    var root = svgDocument.RootSvg;
+    foreach (SvgEntity svgEntity in root.enumerateChildren())
+    {
+        var messages = dumpEntity(svgDocument, svgEntity);
+
+        Console.WriteLine(string.Join("\n", messages));
     }
 }
 finally {
     SvgParser.shutdown();
 }
-List<string> dumpEntity(SvgDocument svgDocument, SvgEntity svgEntity)
+
+List<string> dumpEntity(SvgDocument svgDocument, SvgEntity svgEntity,int indent = 0)
 {
     List<string> messages = new();
     messages.Add($"ID: {svgEntity.Id}; Type = {svgEntity.Type}; Render = {svgEntity.Render}");
@@ -99,14 +106,53 @@ List<string> dumpEntity(SvgDocument svgDocument, SvgEntity svgEntity)
     messages.Add($"FillColour: {dumpPaint(svgDocument, svgEntity.FillColour)}");
     messages.Add($"FillRule: {svgEntity.FillRule.ToString()}; FillOpacity: {svgEntity.FillOpacity}");
     messages.Add($"StrokeColour: {dumpPaint(svgDocument, svgEntity.StrokeColour)}");
-    messages.Add($"StrokeOpacity: {svgEntity.StrokeOpacity}; LineWidth: {svgEntity.StrokeWidth}; LineCap: {svgEntity.LineCap.ToString()}; LineJoin: {svgEntity.LineJoin.ToString()}; MiterLimit: {svgEntity.MiterLimit}; Dash Array: {{string.Join(\" \",svgEntity.DashArray)}}");
+    messages.Add($"StrokeOpacity: {svgEntity.StrokeOpacity}; LineWidth: {svgEntity.StrokeWidth}; LineCap: {svgEntity.LineCap.ToString()}; LineJoin: {svgEntity.LineJoin.ToString()}; MiterLimit: {svgEntity.MiterLimit}; Dash Array: {string.Join(" ",svgEntity.DashArray)}");
     messages.Add($"CssStyle: {svgEntity.CssStyle}");
-    messages.Add($"CssStyle: {svgEntity.CssStyle}");
+    messages.Add($"CssClass: {svgEntity.CssClass}");
     
     switch (svgEntity.Type)
     {
+        case "Path":
+            PieLaboratories.Svg.Path cpath = (PieLaboratories.Svg.Path)svgEntity;
+            PathMove[] pathMoves = cpath.PathMoves;
+            float[] points = cpath.Points;
+            string strMessage = "";
+            int nPointIndex = 0;
+            for(int i = 0; i < pathMoves.Length; i++) {
+                if(strMessage.Length > 0) strMessage += " ";
+                strMessage += pathMoves[i].ToString()[0] + " ";
+                int nPointCount = 0;
+                // note here we don't care about ArcEllipticalTo, or the Smooth Bézs because they get converted to
+                //  cubic béz or the appropriate type of béz.
+                switch(pathMoves[i]) {
+                    case PathMove.MoveTo:
+                    case PathMove.LineTo:
+                        nPointCount = 2;
+                        break;
+                    case PathMove.QuadBézierTo:
+                        nPointCount = 4;
+                        break;
+                    case PathMove.CubicBézierTo:
+                        nPointCount = 6;
+                        break;
+                    case PathMove.HorizontalLineTo:
+                    case PathMove.VerticalLineTo:
+                        nPointCount = 1;
+                        break;
+                    case PathMove.ClosePath:
+                        break;
+                    default: throw new Exception($"Unhandled PathMove {pathMoves[i]}");
+                }
+                float[] thesePoints = new float[nPointCount];
+                for(int j = 0; j < nPointCount; j++) thesePoints[j] = points[nPointIndex + j];
+                strMessage += string.Join(",", thesePoints);
+                nPointIndex += nPointCount;
+            }
+            messages.Add(strMessage);
+            break;
+
         case "Rect":
-            string strMessage = dumpDimensionedEntity(svgDocument, (Rect)svgEntity);
+            strMessage = dumpDimensionedEntity(svgDocument, (Rect)svgEntity);
             Dimension? rx = ((Rect)svgEntity).Rx;
             Dimension? ry = ((Rect)svgEntity).Ry;
             strMessage += "; ";
@@ -117,6 +163,7 @@ List<string> dumpEntity(SvgDocument svgDocument, SvgEntity svgEntity)
             else strMessage += "auto";
             messages.Add(strMessage);
             break;
+
         case "Ellipse":
             strMessage = "";
             Dimension? cx = ((Ellipse)svgEntity).Cx;
@@ -165,12 +212,16 @@ List<string> dumpEntity(SvgDocument svgDocument, SvgEntity svgEntity)
         default: throw new Exception($"Unknown SVG entity type {svgEntity.Type.ToString()}");
     }
 
-    ISvgContainerEntity containerEntity = (ISvgContainerEntity)(svgEntity);
-    if (containerEntity != null)
+    messages.Add(new string('*', 60));
+
+    if (svgEntity is ISvgContainerEntity containerEntity)
     {
         foreach (SvgEntity child in containerEntity.enumerateChildren())
         {
-            List<string> childMessages = dumpEntity(svgDocument, child);
+            List<string> childMessages = dumpEntity(svgDocument, child, indent + 4);
+            foreach(var message in childMessages) {
+                messages.Add(new string(' ', indent) + message);
+            }
             messages.AddRange(childMessages);
         }
     }
@@ -209,7 +260,7 @@ string dumpPaint(SvgDocument svgDocument, SvgPaint svgPaint)
     }
     else
     {
-        return dumpColour(svgDocument, svgPaint.SvgColour);
+        return dumpColour(svgDocument, svgPaint.SvgColour!);
     }
 
     return result;

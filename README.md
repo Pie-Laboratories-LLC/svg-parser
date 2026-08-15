@@ -1,4 +1,5 @@
 # INTRODUCTION
+
 This is an SVG Parser written in C++.  In the very near future it will include
 C# bindings.  It's part of a much larger project that includes 2D and 3D
 rendering engines written from scratch.  It's a lifelong passion project.
@@ -17,7 +18,8 @@ supports:
 * `<linearGradient>`, `<radialGradient>`
 * fill and stroke operations and "currentColor"
 * limited support for the CSS `var()` primitive in colour attributes, e.g.
-  `fill="var(--currentColor,#deadbeef)"`
+  `fill="var(--currentColor,#deadbeef)"`, but see
+  [Known Issues](#known-issues) below
 * optional built-in support for Xerces XML parsing
 * support for XML namespaces (optional)
 * support for DTD validation (optional)
@@ -33,6 +35,20 @@ had used it extensively.  Now there are better options, but I still have a soft
 spot for it and am inherently lazy.  The compromise was to make Xerces support
 optional.  See [Alternatives to Xerces](#alternatives-to-xerces) and
 [Building](#building) below for more information.
+
+# KNOWN ISSUES
+
+* SvgPaint and SvgColour both have provisions for fallback paint or colour to
+  be set, and they both have uses for it: stops in gradient templates use
+  SvgColour and frequently use fallbacks; it's possible to have
+  `fill="var(url(#missing),url(#legit)"` on an element.  Currently, the
+  SvgParser only supports fallbacks on SvgColour.
+* Gradient inheritance is only partially implemented.  GradientTemplate
+  includes the href, but the inheritance mechanism is not implemented.
+* there's currently no provision for looking up colors specified via
+`--colorN`.  Colours using this pattern are preserved in the AST.
+* SvgParser includes a callback mechanism for being notified of errors.  The
+  callback mechanism is not implemented in the c# bindings.
 
 # IMPLEMENTATION NOTES
 The SvgParser creates an abstract syntax tree.  It doesn't strictly look like a
@@ -55,7 +71,80 @@ rendering layer, applying semantic meaning to the abstract syntax tree; in
 addition to "instancing" gradients there's tracking x, y position and the
 transformation matrix.  These are things only knowable at render time.
 
+## NAVIGATING THE CODE
+
+The main SvgParser is in the class src/svg/SvgParser.cpp.  It's straightforward
+as far as parsers go, I'm not using flex/bison or ANTLR, I use regular
+expressions, which more than suffice for SVG.
+
+The xml parser is in src/xml; it's a little obfuscated for abstraction around
+xerces.  The Xerces implementation is clearly implemented in classes starting
+Xerces.
+
+The actual xml parsing is a very small part of the application.  I chose DOM
+because I was only interested in OT-SVG svg glyphs, but see the
+[Roadmap](#ROADMAP) for discussion of a SAX2 implementation.
+
+The various svg entities are part of a class hierarchy which starts with
+src/svg/SvgEntity.hpp.  For instance, `<path ...>` elements are stored in
+src/svg/Path.hpp.
+
+Gradients are stored as templates which get instanced in the rendering layer.
+All information needed to instance the gradient are stored.  It's worth noting,
+the colours in gradients are SvgColour and not SvgPaint, as dictated by the
+spec
+
+The SvgDocument class owns the root Svg element.  The root Svg element, in
+turn, owns the entities defined in it.
+
+SvgPaint and SvgColour represent the paint and color abstractions of the svg
+spec.  Currently, SvgPaint represents a Gradient, and any other valid svg
+colour is contained in SvgColour.  So, when you encounter an SvgPaint, if it's
+not SvgColourType Gradient, it's necessary to get the colour via
+`SvgPaint.getColour` to determine how to fill or stroke an entity.  Note that
+the parsing resolves currentColor.
+
+SvgEntity includes a boolean property "render," which indicates whether the
+entity should be rendered.  Currently, this merely reflects whether the entity
+was defined in a `<defs ...>` tag.  It is still necessary to check the fill or
+stroke to see if it's set to "None" to determine whether to render the entity.
+
+The svg spec is notoriously loosey-goosey.  The aim of this parser was for
+adherance to the spec and consistency with the major browsers.  Because of
+this, if the parser encounters an unknown entity, like `<text...>` at the time
+of this writing, it silently ignores the issue.  There are a few other such
+places.  Implement the callback via `SvgParser::setParserCallback` to be
+notified when such issues occur.
+
+## ERROR REPORTING
+
+SvgParser can silently skip content it doesn't understand — unrecognized
+elements, duplicate ids, and similar issues are logged rather than treated
+as fatal, so a single unsupported tag doesn't abort parsing an otherwise
+valid document. To be notified when this happens, register a callback
+before parsing:
+
+**C++:**
+```c++
+svgParser.setParserCallback([](SvgParserStatus status, const Core::String &message) {
+    std::cerr << "[" << static_cast<int>(status) << "] " << message.c_str() << std::endl;
+});
+```
+
+**C#:**
+```c#
+using SvgParser svgParser = new();
+svgParser.EnableErrorReporting();
+svgParser.OnParseError += (status, msg) => Console.WriteLine($"[{status}] {msg}");
+```
+
+Without this, issues are silently ignored, which may result in missing
+content with no indication why. Registering the callback is strongly
+recommended, especially while developing against untrusted or
+hand-authored SVG.
+
 ## ALTERNATIVES TO XERCES
+
 As noted above, the project uses Xerces for XML parsing.  A precocious user can
 replace this via the abstraction layer.  There are four classes to implement:
 
@@ -74,11 +163,14 @@ depending on the value of the `SVGPARSER_WITH_XERCES` CMake flag (see
 [Building](#building) below).
 
 # BUILDING
+
 Use the following commands to build the application.
+
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build -j$(nproc)
 ```
+
 To build with Xerces support off, pass `-DSVGPARSER_WITH_XERCES=OFF`, to the
 configure command, like so:
 ```bash
@@ -93,9 +185,13 @@ or run the Catch2 executable directly:
 ./build/tests/svgparser_tests
 ```
 
-# EXAMPLES - C++
+# EXAMPLES
+
+## EXAMPLES - C++
+
 The best source for examples is SvgParser-tests.cpp.  Here is the content of example.cpp with the compilation
 command below:
+
 ```c++
 #include <iostream>
 #include <xercesc/util/PlatformUtils.hpp>
@@ -144,6 +240,57 @@ g++ -o example.exe -std=c++23 -fcoroutines -I src example.cpp -lxerces-c -lstdc+
 ./example.exe
 ```
 
+## EXAMPLES - CSHARP
+
+The following is the simple.cs example from samples/csharp, with the compilation command below.  It is
+analogous to the C++ example above:
+
+```csharp
+#:package PieLaboratories.SvgParser@1.0.0-alpha01
+
+using PieLaboratories.Svg;
+
+var svgText = """
+<svg>
+  <g id="g2a">
+    <path id="p2a_1" d="M0,0 L10,10 Z"/>
+    <path id="p2a_2" d="M5,5 L15,15 Z"/>
+  </g>
+</svg>
+""";
+
+SvgParser.init();
+
+try {
+    SvgParser svgParser = new();
+    using(SvgDocument? svgDocument = svgParser.Parse(svgText))
+    {
+        if (svgDocument == null) throw new Exception("SVG document didn't parse.");
+        var groupEntity = svgDocument.lookupSvgEntity("g2a");
+        Console.WriteLine($"Found a group with id {groupEntity.Id}");
+        // alternatively
+        var svg = svgDocument.RootSvg;
+
+        foreach(var child in svg.enumerateChildren()) {
+            Console.WriteLine($"have a child with id {child.Id} of type {child.Type}");
+            if(child is Group groupElement) {
+                foreach(var groupChild in groupElement.enumerateChildren()) {
+                    Console.WriteLine($"Group has a child with id {groupChild.Id} of type {groupChild.Type}");
+                }
+            }
+        }
+    }
+}
+finally {
+    SvgParser.shutdown();
+}
+```
+
+```bash
+dotnet run simple.cs
+```
+
+
 # ROADMAP
 These are short-term goals:
 
@@ -157,6 +304,7 @@ These are short-term goals:
   for the `<text...>` element is essentially free.
 * support for `<pattern...>` elements.  This is another thing for which there is
   extensive support in the rendering layer.
+* Gradient inheritance
 
 These are mid-term goals:
 

@@ -235,17 +235,17 @@ namespace Draw2d::Svg {
         Core::String __retrieveHref(SvgParseState &svgParseState, Xml::IDomEntity *pElement);
         std::vector<float> __parsePoints(const Core::String &d, size_t &pos, size_t nMaximumPoints = 0, bool bExactMaximum = false);
 
-        SvgPaint __parsePaint(SvgParseState &svgParseState, const Core::String &colour);
-        SvgColour __parseColour(SvgParseState &svgParseState, const Core::String &colour);
+        SvgPaint __parsePaint(SvgParseState &svgParseState, const Core::String &colour, SvgParserContext &svgParserContext);
+        SvgColour __parseColour(SvgParseState &svgParseState, const Core::String &colour, SvgParserContext &svgParserContext);
 
         std::unique_ptr<DataStructures::Tree::GeneralTree<Core::String>> __parseVar(const Core::String &cstrVar);
         void __doParseVar(const Core::String &cstrVar, size_t &nPos, DataStructures::Tree::GeneralTree<Core::String> *pGeneralTree, DataStructures::Tree::GeneralTreeNode<Core::String> *pGeneralTreeNode = nullptr);
 
-        const GradientTemplate *__parseGradient(SvgParseState &svgParseState, Xml::IDomEntity *pGradientElement);
+        const GradientTemplate *__parseGradient(SvgParseState &svgParseState, Xml::IDomEntity *pGradientElement, SvgParserContext &svgParserContext);
 
         std::array<float,6> __parseTransform(const Core::String &value, const Core::String &attributeName);
 
-        std::vector<Stop<SvgColour>> __parseStops(SvgParseState &svgParseState, Xml::IDomEntity *pStopsNode);
+        std::vector<Stop<SvgColour>> __parseStops(SvgParseState &svgParseState, Xml::IDomEntity *pStopsNode, SvgParserContext &svgParserContext);
 
     }; // class SvgParser
 

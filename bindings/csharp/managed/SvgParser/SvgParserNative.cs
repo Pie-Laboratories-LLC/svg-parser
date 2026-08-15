@@ -33,8 +33,23 @@ internal static class SvgParserNative {
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate void SvgEntityCallback(IntPtr entity, IntPtr userData);
 
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate void ParserErrorCallback(int status, IntPtr message, IntPtr userData);
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
     public static extern IntPtr svgparser_parse(string svgText);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern IntPtr svgparser_parser_create();
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern void svgparser_parser_free(IntPtr parser);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+    public static extern IntPtr svgparser_parser_parse(IntPtr parser, string svgText);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern void svgparser_set_parser_callback(IntPtr parser, ParserErrorCallback callback, IntPtr userData);
 
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern void svgparser_document_free(IntPtr doc);
@@ -399,7 +414,7 @@ internal static class SvgParserNative {
 
     // helper: marshal a returned const char* into a managed string
     public static string PtrToString(IntPtr ptr) =>
-        ptr == IntPtr.Zero ? string.Empty : Marshal.PtrToStringAnsi(ptr);
+        ptr == IntPtr.Zero ? string.Empty : (Marshal.PtrToStringAnsi(ptr) ?? string.Empty);
 
     // helper: drive the callback-based enumeration into a managed List<IntPtr>
     public static List<IntPtr> GetChildren(IntPtr entity) {
@@ -407,7 +422,7 @@ internal static class SvgParserNative {
         var handle = GCHandle.Alloc(children);
         try {
             SvgEntityCallback cb = (childPtr, userData) => {
-                var list = (List<IntPtr>)GCHandle.FromIntPtr(userData).Target;
+                var list = (List<IntPtr>)GCHandle.FromIntPtr(userData).Target!;
                 list.Add(childPtr);
             };
             svgparser_entity_enumerate_children(entity, cb, GCHandle.ToIntPtr(handle));

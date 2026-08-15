@@ -54,7 +54,7 @@ public class SvgEntityTests : IDisposable
 
     [Fact]
     public void GetType_ReturnsEntityTypeName() =>
-        Assert.Equal("Path", _full.getType);
+        Assert.Equal("Path", _full.Type);
 
     [Fact]
     public void Id_ReturnsSetId() =>
@@ -91,12 +91,12 @@ public class SvgEntityTests : IDisposable
         Assert.Equal(SvgColourType.None, _bare.FillColour.SvgColour!.SvgColourType);
 
     [Fact]
-    public void FillRulea_ReturnsSetRule() =>
-        Assert.Equal(FillRule.EvenOdd, _full.FillRulea);
+    public void FillRule_ReturnsSetRule() =>
+        Assert.Equal(FillRule.EvenOdd, _full.FillRule);
 
     [Fact]
-    public void FillRulea_DefaultsToNonZero() =>
-        Assert.Equal(FillRule.NonZero, _bare.FillRulea);
+    public void FillRule_DefaultsToNonZero() =>
+        Assert.Equal(FillRule.NonZero, _bare.FillRule);
 
     [Fact]
     public void FillOpacity_ReturnsSetValue() =>

@@ -8,7 +8,15 @@
 #endif
 
 // Callback signature: cdecl, receives a non-owning entity handle + the userData token
+
+// near the top of svgparser_c_api.h, after the SVGPARSER_API macro definition
 typedef void (*SvgEntityCallback)(const void* entity, void* userData);
+typedef void (*SvgParserErrorCallback)(int status, const char* message, void* userData);
+
+SVGPARSER_API void* svgparser_parser_create();
+SVGPARSER_API void  svgparser_parser_free(void* parser);
+SVGPARSER_API void* svgparser_parser_parse(void* parser, const char* svgText);
+SVGPARSER_API void  svgparser_set_parser_callback(void* parser, SvgParserErrorCallback callback, void* userData);
 
 // --- xerces initialization ---
 SVGPARSER_API int  svgparser_init(void);   // returns 1 on success, 0 on failure
@@ -17,6 +25,11 @@ SVGPARSER_API void svgparser_shutdown(void);
 // --- Document lifecycle ---
 SVGPARSER_API void* svgparser_parse(const char* svgText);
 SVGPARSER_API void  svgparser_document_free(void* doc);
+
+// --- Error callback ---
+typedef void (*SvgParserErrorCallback)(int status, const char* message, void* userData);
+
+SVGPARSER_API void svgparser_set_parser_callback(void* parser, SvgParserErrorCallback callback, void* userData);
 
 // --- Document -> tree access ---
 SVGPARSER_API const void* svgparser_document_get_root(const void* doc);

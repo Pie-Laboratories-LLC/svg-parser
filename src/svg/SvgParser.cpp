@@ -227,11 +227,12 @@ namespace Draw2d::Svg {
                 });
                 __parseGlobalScope(svgParseState, pChildNode.get(), svgParserContext);
             }
-            else if(strName == GROUP_NAME || strName == PATH_NAME || strName == USE_NAME) {
+            else if(strName == GROUP_NAME || strName == PATH_NAME || strName == USE_NAME
+                 || strName == RECT_NAME || strName == CIRCLE_NAME || strName == ELLIPSE_NAME) {
                 (void) __parseSvgEntity(svgParseState, pChildNode.get(), svgParserContext);
             }
             else if(strName == LINEAR_GRADIENT_NAME || strName == RADIAL_GRADIENT_NAME) {
-                (void) __parseGradient(svgParseState, pChildNode.get());
+                (void) __parseGradient(svgParseState, pChildNode.get(), svgParserContext);
             }
             else if(strName == STYLE_NAME) {
                 __snagStyle(svgParseState, pChildNode.get());
@@ -239,7 +240,7 @@ namespace Draw2d::Svg {
             else if(strName == SVG_NAME) {
                 (void) __parseSvgElement(svgParseState, pChildNode.get(), svgParserContext);
             }
-            else throw SvgException("Unrecognized element {} ", strName.c_str());
+            else if(m_callback) m_callback(SvgParserStatus::Warning, std::format("Unrecognized tag {}", strName.c_str()));
         }
     }
 
@@ -346,7 +347,7 @@ namespace Draw2d::Svg {
     {
         // great suggestion from claude.  Most of these properties can take the value "inherit,"
         //  so we explicitly check for that and ignore any inherit values.  There are a few exceptions
-        __applyIfSet(pElement, COLOR_ATTRIBUTE, [&](auto s) {svgParserContext.setColour(__parseColour(svgParseState, s)); });
+        __applyIfSet(pElement, COLOR_ATTRIBUTE, [&](auto s) {svgParserContext.setColour(__parseColour(svgParseState, s, svgParserContext)); });
 
         Core::String transformAttribute { };
         if (pElement->tryGetAttribute(TRANSFORM_ATTRIBUTE,transformAttribute)) {
@@ -355,13 +356,13 @@ namespace Draw2d::Svg {
             svgParserContext.multiplyRight(matrix);
         }
 
-        __applyIfSet(pElement, FILL_ATTRIBUTE, [&](auto s) {svgParserContext.setFillColour(__parsePaint(svgParseState, s)); });
+        __applyIfSet(pElement, FILL_ATTRIBUTE, [&](auto s) {svgParserContext.setFillColour(__parsePaint(svgParseState, s, svgParserContext)); });
 
         __applyIfSet(pElement, FILL_RULE_ATTRIBUTE, [&](auto s) { svgParserContext.setFillRule(ParseFillRule(s)); });
 
         __applyIfSet(pElement, FILL_OPACITY_ATTRIBUTE, [&](auto s) { svgParserContext.setFillOpacity(Core::ParseFloat(s)); });
 
-        __applyIfSet(pElement, STROKE_ATTRIBUTE, [&](auto s) { svgParserContext.setStrokeColour(__parsePaint(svgParseState, s)); });
+        __applyIfSet(pElement, STROKE_ATTRIBUTE, [&](auto s) { svgParserContext.setStrokeColour(__parsePaint(svgParseState, s, svgParserContext)); });
 
         __applyIfSet(pElement, STROKE_OPACITY_ATTRIBUTE, [&](auto s) { svgParserContext.setStrokeOpacity(Core::ParseFloat(s)); });
 
@@ -492,7 +493,7 @@ namespace Draw2d::Svg {
             const SvgEntity *cpSvgEntity = __parseSvgEntity(svgParseState, pChildNode.get(), svgParserContext);
             if(!cpSvgEntity) {
                 Core::String strChildElementName = pChildNode->getTagName();
-                throw SvgException("Unrecognized child node {} of groupNode",strChildElementName.c_str());
+                if(m_callback) m_callback(SvgParserStatus::Warning,std::format("Unrecognized child node {} of group entity",strChildElementName.c_str()));
             }
 
             svgEntities.push_back(cpSvgEntity);
@@ -703,7 +704,7 @@ namespace Draw2d::Svg {
         return points;
     }
 
-    SvgPaint SvgParser::__parsePaint(SvgParseState &svgParseState, const Core::String &cstrColour)
+    SvgPaint SvgParser::__parsePaint(SvgParseState &svgParseState, const Core::String &cstrColour, SvgParserContext &svgParserContext)
     {
         Core::String strColour = cstrColour.trim();
 
@@ -716,11 +717,11 @@ namespace Draw2d::Svg {
             return SvgPaint(SvgColourType::None);
         }
 
-        SvgColour svgColour = __parseColour(svgParseState, strColour);
+        SvgColour svgColour = __parseColour(svgParseState, strColour, svgParserContext);
         return SvgPaint(svgColour.getSvgColourType(), "", svgColour);
     }
 
-    SvgColour SvgParser::__parseColour(SvgParseState &svgParseState, const Core::String &cstrColour)
+    SvgColour SvgParser::__parseColour(SvgParseState &svgParseState, const Core::String &cstrColour, SvgParserContext &svgParserContext)
     {
         Core::String strColour = cstrColour.trim();
 
@@ -738,9 +739,9 @@ namespace Draw2d::Svg {
 
             if(children[0]->getChildren().size()
             || (children.size() == 2 && children[1]->getChildren().size())) throw SvgException("Internal error; nested var's are not supported in {}", strColour.c_str());
-            SvgColour primary = __parseColour(svgParseState, children[0]->getData());
+            SvgColour primary = __parseColour(svgParseState, children[0]->getData(), svgParserContext);
             if(children.size() == 2) {
-                std::unique_ptr<SvgColour> pFallback = std::make_unique<SvgColour>(__parseColour(svgParseState, children[1]->getData()));
+                std::unique_ptr<SvgColour> pFallback = std::make_unique<SvgColour>(__parseColour(svgParseState, children[1]->getData(), svgParserContext));
                 primary.setFallback(std::move(pFallback));
             }
             return primary;
@@ -784,6 +785,7 @@ namespace Draw2d::Svg {
             return SvgColour(nSize == 4 ? SvgColourType::BgrA : SvgColourType::Bgr, -1, std::move(pBgra));
         }
 
+        // check for hsla
         std::cmatch svgHslMatch;
         if (std::regex_search(strColour.c_str(), svgHslMatch, SvgHslRegex))
         {
@@ -844,7 +846,10 @@ namespace Draw2d::Svg {
             return SvgColour(nSize == 4 ? SvgColourType::HslA : SvgColourType::Hsl, -1, std::move(pHsla));
         }
 
-        if (strColour == "currentColor") return SvgColour(SvgColourType::CurrentColor);
+        if (strColour == "currentColor") {
+            return SvgColour(svgParserContext.getColour());
+        }
+
         if (strColour.starts_with("--color"))
         {
             int index = Core::ParseInteger(strColour.substr(std::strlen("--color")));
@@ -877,7 +882,7 @@ namespace Draw2d::Svg {
         }
 
         return SvgColour(enumColourType, -1, std::move(bgra));
-    } // SvgColour SvgParser::__parseColour(SvgParseState &, const Core::String &)
+    } // SvgColour SvgParser::__parseColour(SvgParseState &, const Core::String &, SvgParserContext &)
 
     std::unique_ptr<DataStructures::Tree::GeneralTree<Core::String>> SvgParser::__parseVar(const Core::String &cstrVar)
     {
@@ -976,7 +981,7 @@ namespace Draw2d::Svg {
         if(bIsString || bBackslash || nParenthesisCount) throw SvgException("Invalid var(): in the middle of a string? {} terminated with a backslash in a string? {} surplus parenthesis count {} in {}", bIsString, bBackslash, nParenthesisCount, cstrVar.c_str());
     }
 
-    const GradientTemplate *SvgParser::__parseGradient(SvgParseState &svgParseState, Xml::IDomEntity *pGradientElement)
+    const GradientTemplate *SvgParser::__parseGradient(SvgParseState &svgParseState, Xml::IDomEntity *pGradientElement, SvgParserContext &svgParserContext)
     {
         std::unique_ptr<GradientTemplate> pGradientTemplate = std::make_unique<GradientTemplate>();
 
@@ -992,7 +997,7 @@ namespace Draw2d::Svg {
         std::array<float,6> matrix {};
         strValue = { };
         if (pGradientElement->tryGetAttribute(GRADIENTTRANSFORM_ATTRIBUTE, strValue)) matrix = __parseTransform(strValue,"gradientTransform");
-        std::vector<Stop<SvgColour>> stops = __parseStops(svgParseState, pGradientElement);
+        std::vector<Stop<SvgColour>> stops = __parseStops(svgParseState, pGradientElement, svgParserContext);
         Core::String strHref = __retrieveHref(svgParseState, pGradientElement);
         strHref.trim_start_in_place(" #");
 
@@ -1176,7 +1181,7 @@ namespace Draw2d::Svg {
         return runningTransform;
     } // std::array<float,6> SvgParser::__parseTransform(Core::String, Core::String)
 
-    std::vector<Stop<SvgColour>> SvgParser::__parseStops(SvgParseState &svgParseState, Xml::IDomEntity *pStopsEntity)
+    std::vector<Stop<SvgColour>> SvgParser::__parseStops(SvgParseState &svgParseState, Xml::IDomEntity *pStopsEntity, SvgParserContext &svgParserContext)
     {
         std::vector<Stop<SvgColour>> results { };
         for(std::unique_ptr<Xml::IDomEntity> pStopNode = std::move(pStopsEntity->getFirstChild());
@@ -1197,7 +1202,7 @@ namespace Draw2d::Svg {
                 if (fOpacity < 0 || fOpacity > 1) throw SvgException(std::format("{} is invalid for opacity (0 <= opacity <= 1)",fOpacity));
             }
 
-            SvgColour svgColour = __parseColour(svgParseState, strStopColourAttribute);
+            SvgColour svgColour = __parseColour(svgParseState, strStopColourAttribute, svgParserContext);
 
             Stop<SvgColour> stop { offset, svgColour, fOpacity };
             results.push_back(stop);

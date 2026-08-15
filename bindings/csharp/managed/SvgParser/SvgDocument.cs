@@ -23,14 +23,9 @@ public class SvgDocument : IDisposable {
         _document = document;
     }
 
-    public Svg getRoot() {
-        IntPtr svg = SvgParserNative.svgparser_document_get_root(_document);
-        return new Svg(svg);
-    }
+    public Svg RootSvg => new Svg(SvgParserNative.svgparser_document_get_root(_document));
 
-    public string getStyle() {
-        return SvgParserNative.PtrToString(SvgParserNative.svgparser_document_get_style(_document));
-    }
+    public string Style => SvgParserNative.PtrToString(SvgParserNative.svgparser_document_get_style(_document));
 
     public SvgEntity? lookupSvgEntity(string id) {
         IntPtr svgEntity = SvgParserNative.svgparser_document_lookup_svg_entity(_document,id);
