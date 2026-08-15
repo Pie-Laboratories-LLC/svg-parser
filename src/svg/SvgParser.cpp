@@ -197,9 +197,16 @@ namespace Draw2d::Svg {
         svgParserContext.setChildWrangler(toReturn);
 
         svgParseState.currentSvg.push_back(toReturn);
-        Core::ScopeExit scopeExit([&svgParseState]() {
-            svgParseState.currentSvg.pop_back();
-        });
+
+        const Core::String &cstrId = toReturn->getId();
+        std::optional<Core::ScopeExit> scopeGuard;
+        if(!Core::String::IsWhitespace(cstrId)) {
+            auto [ it, bInserted ] = svgParseState.useReferences.insert(cstrId);
+            if(!bInserted) throw SvgException("Found circular reference in use {}; all references in the chain {}", cstrId, Core::String::Join(svgParseState.useReferences, ", "));
+            scopeGuard.emplace([&svgParseState,&cstrId](){
+                svgParseState.useReferences.erase(cstrId);
+            });
+        }
 
         __parseGlobalScope(svgParseState, pSvgElement, svgParserContext);
 
@@ -228,7 +235,8 @@ namespace Draw2d::Svg {
                 __parseGlobalScope(svgParseState, pChildNode.get(), svgParserContext);
             }
             else if(strName == GROUP_NAME || strName == PATH_NAME || strName == USE_NAME
-                 || strName == RECT_NAME || strName == CIRCLE_NAME || strName == ELLIPSE_NAME) {
+                 || strName == RECT_NAME || strName == CIRCLE_NAME || strName == ELLIPSE_NAME
+                 || strName == SVG_NAME) {
                 (void) __parseSvgEntity(svgParseState, pChildNode.get(), svgParserContext);
             }
             else if(strName == LINEAR_GRADIENT_NAME || strName == RADIAL_GRADIENT_NAME) {
@@ -236,9 +244,6 @@ namespace Draw2d::Svg {
             }
             else if(strName == STYLE_NAME) {
                 __snagStyle(svgParseState, pChildNode.get());
-            }
-            else if(strName == SVG_NAME) {
-                (void) __parseSvgElement(svgParseState, pChildNode.get(), svgParserContext);
             }
             else if(m_callback) m_callback(SvgParserStatus::Warning, std::format("Unrecognized tag {}", strName.c_str()));
         }
@@ -328,6 +333,10 @@ namespace Draw2d::Svg {
         else if(strChildElementName == CIRCLE_NAME)
         {
             cpSvgEntity = __parseCircle(svgParseState, pChildElement, svgParserContext);
+        }
+        else if(strChildElementName == SVG_NAME)
+        {
+            cpSvgEntity = __parseSvgElement(svgParseState, pChildElement, svgParserContext);
         }
         else if(m_callback) m_callback(SvgParserStatus::Warning, std::format("Unrecognized tag {}", strChildElementName));
 
@@ -485,7 +494,18 @@ namespace Draw2d::Svg {
         std::unique_ptr<Group> pGroup = std::make_unique<Group>(std::move(svgGroupParams));
         Group *toReturn = svgParserContext.getChildWrangler()->addChildAs(std::move(pGroup));
         __saveEntityToDocument(svgParseState, toReturn);
+
         svgParserContext.setChildWrangler(toReturn);
+
+        const Core::String &cstrId = toReturn->getId();
+        std::optional<Core::ScopeExit> scopeGuard;
+        if(!Core::String::IsWhitespace(cstrId)) {
+            auto [ it, bInserted ] = svgParseState.useReferences.insert(cstrId);
+            if(!bInserted) throw SvgException("Found circular reference in use {}; all references in the chain {}", cstrId, Core::String::Join(svgParseState.useReferences, ", "));
+            scopeGuard.emplace([&svgParseState,&cstrId](){
+                svgParseState.useReferences.erase(cstrId);
+            });
+        }
 
         for(std::unique_ptr<Xml::IDomEntity> pChildNode = std::move(pGroupElement->getFirstChild());
             pChildNode; pChildNode = pChildNode->getNextSibling())
@@ -564,18 +584,14 @@ namespace Draw2d::Svg {
             //  therefore a circular reference
             auto [ it, bInserted ] = svgParseState.useReferences.insert(strHref);
             if(!bInserted) throw SvgException("Found circular reference in use {}; all references in the chain {}", strHref.c_str(), Core::String::Join(svgParseState.useReferences, ", ").c_str());
+            Core::ScopeExit se([&svgParseState,&strHref](){
+                svgParseState.useReferences.erase(strHref);
+            });
 
             // we'll set the use node as the child wrangler so this child node is assigned
             //  to it.
             SvgContainerEntity *pChildWrangler = svgParserContext.getChildWrangler();
             svgParserContext.setChildWrangler(toReturn);
-
-            // when we unwind from parsing use' target, undo the changes
-            //  we made to the parse state / context
-            Core::ScopeExit scopeExit([&]() {
-                svgParseState.useReferences.erase(strHref);
-                svgParserContext.setChildWrangler(pChildWrangler);
-            });
 
             // we don't care about the result here, Because we sat use as the
             //  child wrangler, the child entity will belong to the use

@@ -37,7 +37,17 @@ namespace Core {
             other.m_bActive = false;
             other.m_function = nullptr;
         }
-        ScopeExit& operator=(ScopeExit&&) = delete; // or implement similarly if needed
+        ScopeExit& operator=(ScopeExit&& move) noexcept 
+        {
+            if (this != &move) {
+                if(m_bActive) m_function(); // run this object's own pending cleanup before being replaced
+                m_function = std::move(move.m_function);
+                m_bActive = std::move(move.m_bActive);
+                move.m_function = nullptr; // or whatever your "armed" sentinel is, so move's dtor no-ops
+                move.m_bActive = false;
+            }
+            return *this;
+        }
 
         void execute() { if (m_bActive) m_function(); m_bActive = false; }
 

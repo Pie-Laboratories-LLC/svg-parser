@@ -150,7 +150,9 @@ TEST_CASE("2d. Group with transform (single matrix)", "[group][svg]") {
 TEST_CASE("2e. Group with unrecognized child element (should throw)", "[group][svg]") {
     Draw2d::Svg::SvgParser svgParser {};
     auto svg2e = R"xxx(<svg><g id="g2e"><triangle cx="5" cy="5" r="3"/></g></svg>)xxx";
-    REQUIRE_THROWS_AS ( svgParser.parse(svg2e), Draw2d::Svg::SvgException );
+    // previously unrecognized group children would throw().  Now for browser and
+    //  spec consistency we don't throw
+    REQUIRE_NOTHROW ( svgParser.parse(svg2e) );
 }
 
 TEST_CASE("3a. Basic defs + use", "[svg][use]") {
@@ -571,8 +573,9 @@ TEST_CASE("7p. Malformed transform — unclosed paren (should throw)", "[transfo
 
 TEST_CASE("8a. Unrecognized top-level element (should throw)", "[structural][throws][svg]") {
     Draw2d::Svg::SvgParser svgParser {};
-    auto svg8a = R"xxx(<svg><circle cx="5" cy="5" r="3"/></svg>)xxx";
-    REQUIRE_THROWS_AS ( svgParser.parse(svg8a), Draw2d::Svg::SvgException );
+    auto svg8a = R"xxx(<svg><triangle cx="5" cy="5" r="3"/></svg>)xxx";
+    // as with group example above, this used to throw, now it ignores/callsback
+    REQUIRE_NOTHROW ( svgParser.parse(svg8a) );
 }
 
 TEST_CASE("8b. Empty svg root (no children) — should this throw or no-op?", "[structural][svg]") {
@@ -663,7 +666,7 @@ auto svg8g = R"xxx(
     REQUIRE( pResult != nullptr );
 }
 
-TEST_CASE("9a. Direct self-reference (use pointing at itself)", "[self-reference][svg][xxx]") {
+TEST_CASE("9a. Direct self-reference (use pointing at itself)", "[self-reference][svg]") {
     Draw2d::Svg::SvgParser svgParser {};
     auto svg9b = R"xxx(
 <svg>
@@ -722,7 +725,7 @@ auto svg9e =
     REQUIRE( pResult != nullptr );
 }
 
-TEST_CASE("9f. use: cycle through nested svg is broken", "[self-reference][throws][svg]") {
+TEST_CASE("9f. use: cycle through nested svg is broken", "[self-reference][throws][svg][xxx]") {
     Draw2d::Svg::SvgParser svgParser {};
     auto svg9f = R"xxx(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <g id="outer">
