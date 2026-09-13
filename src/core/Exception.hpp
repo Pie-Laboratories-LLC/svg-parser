@@ -17,7 +17,12 @@
 #ifndef CORE_EXCEPTION_DOT_HPP
 #define CORE_EXCEPTION_DOT_HPP
 
-#include <stacktrace>
+#if __has_include(<stacktrace>)
+    #include <stacktrace>
+    #define SVGPARSER_HAS_STACKTRACE 1
+#else
+    #define SVGPARSER_HAS_STACKTRACE 0
+#endif
 #include <format>
 #ifndef STRING_DOT_HPP
     #include "core/String.hpp"
@@ -33,7 +38,11 @@ namespace Core {
 
         Exception(const Core::String &cstrMessage):
             m_strMessage(cstrMessage),
-            m_strStackTrace(std::to_string(std::stacktrace::current()))
+#if SVGPARSER_HAS_STACKTRACE
+        m_strStackTrace(std::to_string(std::stacktrace::current()))
+#else
+        m_strStackTrace("(stack trace unavailable on this platform)")
+#endif
         {
             __buildFullMessage();
         }

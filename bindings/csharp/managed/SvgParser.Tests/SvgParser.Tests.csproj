@@ -34,7 +34,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>libsvgparser_c.so</Link>
     </None>
-    <None Include="$(MSBuildProjectDirectory)/../../../../build/bindings/csharp/native/libsvgparser_c.dll"
+    <None Include="$(MSBuildProjectDirectory)/../../../../build/bindings/csharp/native/svgparser_c.dll"
           Condition="$([MSBuild]::IsOSPlatform('Windows'))">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>svgparser_c.dll</Link>
