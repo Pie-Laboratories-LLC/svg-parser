@@ -60,6 +60,7 @@ public class ImageTests : IDisposable
         // resolving currentColor) -- href holds the decoded bytes, not the
         // original data URI or its base64 form.
         Assert.Equal("hello", _full.Href);
+        Assert.Equal(HrefKind.DecodedBinary, _full.HrefKind);
     }
 
     [Fact]
@@ -85,6 +86,12 @@ public class ImageTests : IDisposable
     public void CrossOrigin_ReturnsSetValue()
     {
         Assert.Equal(CrossOrigin.Anonymous, _full.CrossOrigin);
+    }
+
+    [Fact]
+    public void HrefKind_DefaultsToUrl()
+    {
+        Assert.Equal(HrefKind.Url,_bare.HrefKind);
     }
 
     [Fact]

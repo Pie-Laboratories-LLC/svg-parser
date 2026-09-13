@@ -26,7 +26,7 @@ internal static class SvgParserNative {
 
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int svgparser_init();
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern void svgparser_shutdown();
 
@@ -413,125 +413,131 @@ internal static class SvgParserNative {
         (DimensionUnits)svgparser_ellipse_get_ry_units(ellipse);
 
     // --- Image ---
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern IntPtr svgparser_image_get_href(IntPtr image);
-    
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_image_get_href_kind(IntPtr image);
+
+    public static HrefKind GetHrefKind(IntPtr image) =>
+        (HrefKind)svgparser_image_get_href_kind(image);
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern IntPtr svgparser_image_get_image_type(IntPtr image);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern IntPtr svgparser_image_get_character_encoding(IntPtr image);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     private static extern int svgparser_image_get_preserve_aspect_ratio(IntPtr image);
-    
+
     public static PreserveAspectRatio GetPreserveAspectRatio_Image(IntPtr image) =>
         (PreserveAspectRatio)svgparser_image_get_preserve_aspect_ratio(image);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     private static extern int svgparser_image_get_preserve_aspect_ratio_mode(IntPtr image);
-    
+
     public static PreserveAspectRatioMode GetPreserveAspectRatioMode_Image(IntPtr image) =>
         (PreserveAspectRatioMode)svgparser_image_get_preserve_aspect_ratio_mode(image);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int svgparser_image_get_has_cross_origin(IntPtr image);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     private static extern int svgparser_image_get_cross_origin(IntPtr image);
-    
+
     public static CrossOrigin GetCrossOrigin(IntPtr image) =>
         (CrossOrigin)svgparser_image_get_cross_origin(image);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int svgparser_image_get_has_decoding(IntPtr image);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     private static extern int svgparser_image_get_decoding(IntPtr image);
-    
+
     public static Decoding GetDecoding(IntPtr image) =>
         (Decoding)svgparser_image_get_decoding(image);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int svgparser_image_get_has_fetch_priority(IntPtr image);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     private static extern int svgparser_image_get_fetch_priority(IntPtr image);
-    
+
     public static FetchPriority GetFetchPriority(IntPtr image) =>
         (FetchPriority)svgparser_image_get_fetch_priority(image);
-    
+
     // --- Text ---
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int svgparser_text_get_x_count(IntPtr text);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern void svgparser_text_get_x(IntPtr text, float[] buffer, int bufferSize);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int svgparser_text_get_y_count(IntPtr text);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern void svgparser_text_get_y(IntPtr text, float[] buffer, int bufferSize);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int svgparser_text_get_dx_count(IntPtr text);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern void svgparser_text_get_dx(IntPtr text, float[] buffer, int bufferSize);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int svgparser_text_get_dy_count(IntPtr text);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern void svgparser_text_get_dy(IntPtr text, float[] buffer, int bufferSize);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int svgparser_text_get_rotate_count(IntPtr text);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern void svgparser_text_get_rotate(IntPtr text, float[] buffer, int bufferSize);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     private static extern int svgparser_text_get_length_adjust(IntPtr text);
-    
+
     public static LengthAdjust GetLengthAdjust(IntPtr text) =>
         (LengthAdjust)svgparser_text_get_length_adjust(text);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int svgparser_text_has_text_length(IntPtr text);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern float svgparser_text_get_text_length(IntPtr text);
-    
+
     // --- Svg ---
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     private static extern int svgparser_svg_get_preserve_aspect_ratio(IntPtr svg);
-    
+
     public static PreserveAspectRatio GetPreserveAspectRatio_Svg(IntPtr svg) =>
         (PreserveAspectRatio)svgparser_svg_get_preserve_aspect_ratio(svg);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     private static extern int svgparser_svg_get_preserve_aspect_ratio_mode(IntPtr svg);
-    
+
     public static PreserveAspectRatioMode GetPreserveAspectRatioMode_Svg(IntPtr svg) =>
         (PreserveAspectRatioMode)svgparser_svg_get_preserve_aspect_ratio_mode(svg);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int svgparser_svg_has_viewbox(IntPtr svg);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern float svgparser_svg_get_viewbox_x(IntPtr svg);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern float svgparser_svg_get_viewbox_y(IntPtr svg);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern float svgparser_svg_get_viewbox_width(IntPtr svg);
-    
+
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern float svgparser_svg_get_viewbox_height(IntPtr svg);
 

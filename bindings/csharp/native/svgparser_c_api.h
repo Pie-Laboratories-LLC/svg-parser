@@ -154,6 +154,7 @@ SVGPARSER_API int   svgparser_ellipse_get_ry_units(const void* ellipse);
 
 // --- Image ---
 SVGPARSER_API const char *svgparser_image_get_href(const void* image);
+SVGPARSER_API int         svgparser_image_get_href_kind(const void* image);
 SVGPARSER_API const char *svgparser_image_get_image_type(const void* image);
 SVGPARSER_API const char *svgparser_image_get_character_encoding(const void* image);
 SVGPARSER_API int         svgparser_image_get_preserve_aspect_ratio(const void* image);

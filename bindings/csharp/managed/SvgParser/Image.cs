@@ -28,6 +28,7 @@ public class Image: SvgEntity, ISvgDimensionedEntity {
     public Dimension? Height => SvgHelpers.GetDimensionedHeight(_image);
 
     public string Href => SvgParserNative.PtrToString(SvgParserNative.svgparser_image_get_href(_image));
+    public HrefKind HrefKind => SvgParserNative.GetHrefKind(_image);
     public string ImageType => SvgParserNative.PtrToString(SvgParserNative.svgparser_image_get_image_type(_image));
     public string CharacterEncoding => SvgParserNative.PtrToString(SvgParserNative.svgparser_image_get_character_encoding(_image));
 

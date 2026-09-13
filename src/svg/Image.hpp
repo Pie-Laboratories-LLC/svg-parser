@@ -34,12 +34,16 @@
 #ifndef DRAW2D_SVG_FETCHPRIORITY_DOT_HPP
     #include "svg/FetchPriority.hpp"
 #endif
+#ifndef DRAW2D_SVG_HREFKIND_DOT_HPP
+    #include "svg/HrefKind.hpp"
+#endif
 
 namespace Draw2d::Svg {
 
     struct SvgImageParams : public SvgEntityParams {
         SvgDimensionedParams svgDimensionedParams;
         Core::String href;
+        HrefKind hrefKind;
         Core::String imageType;
         Core::String characterEncoding;
         PreserveAspectRatio preserveAspectRatio = PreserveAspectRatio::xMidYMid;
@@ -60,6 +64,7 @@ namespace Draw2d::Svg {
             : SvgEntity(static_cast<SvgEntityParams &&>(p))
             , m_svgDimensionedEntity(std::move(p.svgDimensionedParams))
             , m_strHref(std::move(p.href))
+            , m_enumHrefKind(p.hrefKind)
             , m_strImageType(std::move(p.imageType))
             , m_strCharacterEncoding(std::move(p.characterEncoding))
             , m_enumPreserveAspectRatio(p.preserveAspectRatio)
@@ -77,6 +82,7 @@ namespace Draw2d::Svg {
         std::optional<Dimension> getHeight() const  { return m_svgDimensionedEntity.getHeight(); }
 
         const Core::String &getHref() const { return m_strHref; }
+        const HrefKind getHrefKind() const { return m_enumHrefKind; }
         const Core::String &getImageType() const { return m_strImageType; }
         const Core::String &getCharacterEncoding() const { return m_strCharacterEncoding; }
         PreserveAspectRatio getPreserveAspectRatio() const { return m_enumPreserveAspectRatio; }
@@ -91,6 +97,7 @@ namespace Draw2d::Svg {
     private:
         SvgDimensionedEntity m_svgDimensionedEntity;
         Core::String m_strHref {};
+        HrefKind m_enumHrefKind;
         Core::String m_strImageType {};
         Core::String m_strCharacterEncoding {};
         PreserveAspectRatio m_enumPreserveAspectRatio = PreserveAspectRatio::xMidYMid;

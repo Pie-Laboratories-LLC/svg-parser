@@ -912,21 +912,25 @@ TEST_CASE("11a. Basic image with dimensions", "[image][svg]") {
     REQUIRE(image->getWidth().has_value());
     REQUIRE(image->getHeight().has_value());
     REQUIRE(image->getHref() == "picture.png");
+    REQUIRE(image->getHrefKind() == Draw2d::Svg::HrefKind::Url);
 }
 
 TEST_CASE("11b. image with valid base64-encoded data URI href", "[image][svg]") {
     Draw2d::Svg::SvgParser svgParser {};
-    // "PNG" magic bytes base64-encoded is not required to be a real image --
-    // parser should only validate the base64 encoding itself, not decode/
-    // sniff image content.
-    auto svg11b = R"xxx(<svg><image id="i11b" width="10" height="10" href="data:image/png;base64,iVBORw0KGgo="/></svg>)xxx";
+    // "hello" base64-encoded is "aGVsbG8=" -- chosen so the expected decoded
+    // bytes are human-verifiable rather than an opaque magic number.
+    auto svg11b = R"xxx(<svg><image id="i11b" width="10" height="10" href="data:image/png;base64,aGVsbG8="/></svg>)xxx";
     auto svgDocument = svgParser.parse(svg11b);
 
     const auto *image = dynamic_cast<const Draw2d::Svg::Image *>(svgDocument.get()->lookupSvgEntity("i11b"));
     REQUIRE(image != nullptr);
-    // cheeky, but good enough.  would be better to have the actual 8 bytes and verify them.  rainy day
-    //  project
-    REQUIRE(image->getHref().size() == 8);
+
+    // The parser resolves the base64 payload eagerly (same principle as
+    // resolving currentColor) -- href holds the decoded bytes, not the
+    // original data URI or its base64 form.
+    REQUIRE(image->getHref() == "hello");
+    REQUIRE(image->getHrefKind() == Draw2d::Svg::HrefKind::DecodedBinary);
+    REQUIRE(image->getImageType() == "png");
 }
 
 TEST_CASE("11c. image with malformed base64 data URI throws", "[image][throws][svg]") {
@@ -945,6 +949,7 @@ TEST_CASE("11d. image with legacy xlink:href", "[image][svg]") {
     const auto *image = dynamic_cast<const Draw2d::Svg::Image *>(svgDocument.get()->lookupSvgEntity("i11d"));
     REQUIRE(image != nullptr);
     REQUIRE(image->getHref() == "picture.png");
+    REQUIRE(image->getHrefKind() == Draw2d::Svg::HrefKind::Url);
 }
 
 TEST_CASE("11e. image with preserveAspectRatio", "[image][svg]") {
@@ -975,7 +980,7 @@ TEST_CASE("11f. image with crossorigin/decoding/fetchpriority", "[image][svg]") 
     REQUIRE(image->getFetchPriority().value() == Draw2d::Svg::FetchPriority::High);
 }
 
-TEST_CASE("11g. image with missing href throws", "[image][throws][svg]") {
+TEST_CASE("11g. image with missing href does not throw", "[image][svg]") {
     Draw2d::Svg::SvgParser svgParser {};
     auto svg11g = R"xxx(<svg><image id="i11g" width="10" height="10"/></svg>)xxx";
     auto svgDocument = svgParser.parse(svg11g);
@@ -983,4 +988,18 @@ TEST_CASE("11g. image with missing href throws", "[image][throws][svg]") {
     const auto *image = dynamic_cast<const Draw2d::Svg::Image *>(svgDocument.get()->lookupSvgEntity("i11g"));
     REQUIRE(image != nullptr);
     REQUIRE(image->getHref().empty());
+}
+
+TEST_CASE("11h. image with literal-text (non-base64) data URI", "[image][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg11h = R"xxx(<svg><image id="i11h" width="10" height="10" href="data:image/svg+xml;charset=utf-8,hello"/></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg11h);
+
+    const auto *image = dynamic_cast<const Draw2d::Svg::Image *>(svgDocument.get()->lookupSvgEntity("i11h"));
+    REQUIRE(image != nullptr);
+
+    REQUIRE(image->getHref() == "hello");
+    REQUIRE(image->getHrefKind() == Draw2d::Svg::HrefKind::LiteralText);
+    REQUIRE(image->getImageType() == "svg+xml");
+    REQUIRE(image->getCharacterEncoding() == "utf-8");
 }

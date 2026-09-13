@@ -597,6 +597,10 @@ const char* svgparser_image_get_href(const void* image) {
     try { return static_cast<const Image*>(image)->getHref().c_str(); } catch (...) { return nullptr; }
 }
 
+int svgparser_image_get_href_kind(const void* image) {
+    try { return static_cast<int>(static_cast<const Image*>(image)->getHrefKind()); } catch (...) { return 0; }
+}
+
 const char* svgparser_image_get_image_type(const void* image) {
     try { return static_cast<const Image*>(image)->getImageType().c_str(); } catch (...) { return nullptr; }
 }

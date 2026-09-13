@@ -703,6 +703,7 @@ namespace Draw2d::Svg {
         svgImageParams.svgDimensionedParams.height = height;
 
         svgImageParams.href = __retrieveHref(svgParseState, pImageElement);
+        svgImageParams.hrefKind = HrefKind::Url;
         std::cmatch dataUriMatch;
         if(std::regex_search(svgImageParams.href.c_str(), dataUriMatch, SvgParser::DataUriRegex)) {
             svgImageParams.imageType = dataUriMatch[1].str();
@@ -724,10 +725,12 @@ namespace Draw2d::Svg {
                 auto decodedBytes = Core::base64Decode(strEncoded);
                 std::string bytes(decodedBytes.begin(), decodedBytes.end());
                 svgImageParams.href = bytes;
+                svgImageParams.hrefKind = HrefKind::DecodedBinary;
             }
             else {
                 // strip off the data uri
                 svgImageParams.href = svgImageParams.href.substr(dataUriMatch[0].str().length());
+                svgImageParams.hrefKind = HrefKind::LiteralText;
             }
         }
 
