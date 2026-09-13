@@ -30,7 +30,7 @@
 
   <ItemGroup>
     <None Include="$(MSBuildProjectDirectory)/../../../../build/bindings/csharp/native/libsvgparser_c.so"
-          Condition="!$([MSBuild]::IsOSPlatform('Windows'))">
+          Condition="$([MSBuild]::IsOSPlatform('Linux'))">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>libsvgparser_c.so</Link>
     </None>
