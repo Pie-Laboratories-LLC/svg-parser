@@ -81,7 +81,7 @@ TEST_CASE("1f. Path not closed (should throw)", "[path][svg]") {
     REQUIRE( result != nullptr );
 }
 
-TEST_CASE("1g. Malformed — L before any M (should insert MoveTo)", "[path][svg]") {
+TEST_CASE("1g. Malformed - L before any M (should insert MoveTo)", "[path][svg]") {
     Draw2d::Svg::SvgParser svgParser {};
     auto svg1g = R"xxx(<svg><path id="p1g" d="L 10 10 Z"/></svg>)xxx";
     auto svgDocument = svgParser.parse(svg1g);
@@ -503,7 +503,7 @@ TEST_CASE("7f. rotate, angle + cx + cy", "[transform][svg]") {
     REQUIRE( result != nullptr );
 }
 
-TEST_CASE("7g. rotate with only 2 args (malformed — should throw per spec)", "[transform][throws][svg]") {
+TEST_CASE("7g. rotate with only 2 args (malformed - should throw per spec)", "[transform][throws][svg]") {
     Draw2d::Svg::SvgParser svgParser {};
     auto svg7g = R"xxx(<svg><g id="g7g" transform="rotate(45,10)"><path id="p7g" d="M0,0 L1,1 Z"/></g></svg>)xxx";
     REQUIRE_THROWS_AS ( svgParser.parse(svg7g), Draw2d::Svg::SvgException );
@@ -571,7 +571,7 @@ TEST_CASE("7o. Unknown transform function (should throw)", "[transform][svg][thr
     REQUIRE_THROWS_AS ( svgParser.parse(svg7o), Draw2d::Svg::SvgException );
 }
 
-TEST_CASE("7p. Malformed transform — unclosed paren (should throw)", "[transform][throws][svg]") {
+TEST_CASE("7p. Malformed transform - unclosed paren (should throw)", "[transform][throws][svg]") {
     Draw2d::Svg::SvgParser svgParser {};
     auto svg7p = R"xxx(<svg><g id="g7p" transform="translate(10,20"><path id="p7p" d="M0,0 L1,1 Z"/></g></svg>)xxx";
     REQUIRE_THROWS_AS ( svgParser.parse(svg7p), Draw2d::Svg::SvgException );
@@ -584,7 +584,7 @@ TEST_CASE("8a. Unrecognized top-level element (should throw)", "[structural][thr
     REQUIRE_NOTHROW ( svgParser.parse(svg8a) );
 }
 
-TEST_CASE("8b. Empty svg root (no children) — should this throw or no-op?", "[structural][svg]") {
+TEST_CASE("8b. Empty svg root (no children) - should this throw or no-op?", "[structural][svg]") {
     Draw2d::Svg::SvgParser svgParser {};
     auto svg8b = R"xxx(<svg></svg>)xxx";
     auto svgDocument = svgParser.parse(svg8b);

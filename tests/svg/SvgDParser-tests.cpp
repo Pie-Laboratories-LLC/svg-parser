@@ -145,7 +145,7 @@ TEST_CASE("1j. smooth cubic with no preceding cubic degenerates to current point
     REQUIRE( points[5] == Catch::Approx(10.0f) );  // reflected control1.y == current y
 }
 
-TEST_CASE("1k. arcellipticto is replaced by Cubic béziers", "[svg-d]") {
+TEST_CASE("1k. arcellipticto is replaced by Cubic beziers", "[svg-d]") {
     auto strD = R"xxx(M0 0 A10 20 15 0 0 20 20Z)xxx";
     Draw2d::Svg::SvgDParser svgDParser {};
     auto [ pathMoves, points ] = svgDParser.parseD(strD);
