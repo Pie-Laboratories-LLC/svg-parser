@@ -101,6 +101,9 @@ jobs:
       - name: Build managed library
         run: dotnet build bindings/csharp/managed/SvgParser -c Release
 
+      - name: Install NuGet CLI
+        uses: nuget/setup-nuget@v2
+
       - name: Pack NuGet package
         run: nuget pack bindings/csharp/managed/SvgParser/SvgParser.nuspec -Version 1.1.0 -Properties Configuration=Release
 
