@@ -8,31 +8,22 @@
     <RootNamespace>PieLaboratories.Svg</RootNamespace>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <Version>1.0.0</Version>
-    <IsPackable>true</IsPackable>
-    <NuspecFile>PieLaboratories.SvgParser.nuspec</NuspecFile>
-    <NuspecBasePath>$(MSBuildProjectDirectory)</NuspecBasePath>
-    <NuspecProperties>version=$(Version);configuration=$(Configuration)</NuspecProperties>
-    <PackageOutputPath>$(MSBuildProjectDirectory)/../../../../artifacts/nupkgs</PackageOutputPath>
-  </PropertyGroup>
+<PropertyGroup>
+    <PackageId>PieLaboratories.SvgParser</PackageId>
+    <Version>1.1.0</Version>
+    <Authors>Pie Laboratories, LLC.</Authors>
+    <Description>Managed .NET bindings for the Pie Laboratories SvgParser C++ library...</Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Pie-Laboratories-LLC/svg-parser</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Pie-Laboratories-LLC/svg-parser.git</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+</PropertyGroup>
 
-  <ItemGroup>
-    <None Include="$(MSBuildProjectDirectory)/../../../../build/bindings/csharp/native/libsvgparser_c.so"
-          Condition="$([MSBuild]::IsOSPlatform('Linux'))">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>libsvgparser_c.so</Link>
-    </None>
-    <None Include="$(MSBuildProjectDirectory)/../../../../build/bindings/csharp/native/svgparser_c.dll"
-          Condition="$([MSBuild]::IsOSPlatform('Windows'))">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>svgparser_c.dll</Link>
-    </None>
-    <None Include="$(MSBuildProjectDirectory)/../../../../build/bindings/csharp/native/libsvgparser_c.dylib"
-          Condition="$([MSBuild]::IsOSPlatform('OSX'))">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>libsvgparser_c.dylib</Link>
-    </None>
-  </ItemGroup>
+<ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="" />
+    <None Include="../../../../build/bindings/csharp/native/libsvgparser_c.so" Pack="true" PackagePath="runtimes/linux-x64/native/" Condition="Exists('../../../../build/bindings/csharp/native/libsvgparser_c.so')" />
+    <None Include="../../../../build/bindings/csharp/native/svgparser_c.dll" Pack="true" PackagePath="runtimes/win-x64/native/" Condition="Exists('../../../../build/bindings/csharp/native/svgparser_c.dll')" />
+    <None Include="../../../../build/bindings/csharp/native/libsvgparser_c-arm64.dylib" Pack="true" PackagePath="runtimes/osx-arm64/native/libsvgparser_c.dylib" Condition="Exists('../../../../build/bindings/csharp/native/libsvgparser_c-arm64.dylib')" />
+</ItemGroup>
 
 </Project>

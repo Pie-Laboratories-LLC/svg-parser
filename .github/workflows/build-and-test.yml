@@ -105,7 +105,7 @@ jobs:
         uses: nuget/setup-nuget@v2
 
       - name: Pack NuGet package
-        run: nuget pack bindings/csharp/managed/SvgParser/SvgParser.nuspec -Version 1.1.0 -Properties Configuration=Release
+        run: dotnet pack bindings/csharp/managed/SvgParser -c Release -o .
 
       - name: Push to NuGet.org
         if: github.event_name == 'workflow_dispatch'
