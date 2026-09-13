@@ -48,7 +48,7 @@ jobs:
 
       - name: Configure CMake (Windows)
         if: runner.os == 'Windows'
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DSVGPARSER_WITH_CSHARP_BINDINGS=ON -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DSVGPARSER_WITH_CSHARP_BINDINGS=ON -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static-md
       
       - name: Configure CMake (Linux/macOS)
         if: runner.os != 'Windows'
