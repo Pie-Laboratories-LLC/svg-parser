@@ -104,8 +104,10 @@ jobs:
       - name: Pack NuGet package
         run: nuget pack bindings/csharp/managed/SvgParser/SvgParser.nuspec -Version 1.1.0 -Properties Configuration=Release
 
-      - name: Upload NuGet package artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: nuget-package
-          path: '*.nupkg'
+      - name: Push to NuGet.org
+        if: github.event_name == 'workflow_dispatch'
+        run: dotnet nuget push *.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
+
+      - name: Push to GitHub Packages
+        if: github.event_name == 'workflow_dispatch'
+        run: dotnet nuget push *.nupkg --source https://nuget.pkg.github.com/Pie-Laboratories-LLC/index.json --api-key ${{ secrets.GH_PACKAGES_PAT }}
