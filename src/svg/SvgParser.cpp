@@ -17,6 +17,7 @@
 #include <cstring>
 #include <unordered_set>
 #include <iostream>
+#include <numbers>
 
 #include "svg/SvgParser.hpp"
 

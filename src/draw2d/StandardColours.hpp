@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
+#include <cstdint>
 #include <format>
 #include <memory>
 #include <map>
+#include <array>
 
 #ifndef STRING_DOT_HPP
     #include "core/String.hpp"

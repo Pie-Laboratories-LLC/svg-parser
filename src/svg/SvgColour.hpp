@@ -17,7 +17,9 @@
 #ifndef SVGCOLOUR_DOT_HPP
 #define SVGCOLOUR_DOT_HPP
 
+#include <functional>
 #include <memory>
+#include <array>
 
 #ifndef SVGCOLOURTYPE_DOT_HPP
     #include "svg/SvgColourType.hpp"

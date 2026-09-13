@@ -17,6 +17,7 @@
 #ifndef GENERALTREENODE_DOT_HPP
 #define GENERALTREENODE_DOT_HPP
 
+#include <iterator>
 #include <vector>
 #include <memory>
 #include <functional>

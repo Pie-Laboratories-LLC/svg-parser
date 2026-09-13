@@ -15,6 +15,7 @@
  */
 
 #include <cmath>
+#include <numbers>
 
 #include "svg/SvgDParser.hpp"
 
