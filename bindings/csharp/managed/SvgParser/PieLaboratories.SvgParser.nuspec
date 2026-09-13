@@ -24,6 +24,8 @@
          entries here once the native CMake build produces other platforms' binaries. -->
     <file src="../../../../build/bindings/csharp/native/libsvgparser_c.so" target="runtimes/linux-x64/native/" />
     <file src="../../../../build/bindings/csharp/native/libsvgparser_c.dll" target="runtimes/win-x64/native/svgparser_c.dll" />
+    <file src="../../../../build/bindings/csharp/native/libsvgparser_c-arm64.dylib" target="runtimes/osx-arm64/native/libsvgparser_c.dylib" />
+    <file src="../../../../build/bindings/csharp/native/libsvgparser_c-x64.dylib" target="runtimes/osx-x64/native/libsvgparser_c.dylib" />
     <file src="README.md" target="" />
   </files>
 </package>

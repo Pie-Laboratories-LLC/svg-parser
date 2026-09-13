@@ -39,6 +39,11 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>svgparser_c.dll</Link>
     </None>
+    <None Include="$(MSBuildProjectDirectory)/../../../../build/bindings/csharp/native/libsvgparser_c.dylib"
+          Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>libsvgparser_c.dylib</Link>
+    </None>
   </ItemGroup>
 
 </Project>
