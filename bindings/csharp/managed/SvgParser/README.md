@@ -11,13 +11,14 @@ It's part of a larger project whose progress can be tracked on
 The particular svg elements covered consist of:
 
 * `<path>`, `<rect>`, `<group>`, `<use>`, `<ellipse>`, `<circle>`, `<defs>`
-* `<linearGradient>`, `<radialGradient>`
+  `<linearGradient>`, `<radialGradient>`, `<text>`, `<image>`
 * fill and stroke operations and "currentColor"
 * limited support for the CSS `var()` primitive in colour attributes, e.g.
   `fill="var(--currentColor,#deadbeef)"`
 * optional built-in support for Xerces XML parsing
 * support for XML namespaces (optional)
 * support for DTD validation (optional)
+* bindings for windows, linux, and macOS.
 
 # PARSING
 
@@ -121,7 +122,7 @@ List<string> dumpEntity(SvgDocument svgDocument, SvgEntity svgEntity,int indent 
 
 # ERROR REPORTING
 
-SvgParser can silently skip content it doesn't understand — unrecognized
+SvgParser can silently skip content it doesn't understand - unrecognized
 elements, duplicate ids, and similar issues are logged rather than treated
 as fatal, so a single unsupported tag doesn't abort parsing an otherwise
 valid document. To be notified when this happens, register a callback

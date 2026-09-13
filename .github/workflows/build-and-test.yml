@@ -91,15 +91,15 @@ jobs:
         with:
           path: native-artifacts
 
-      - name: Build managed library
-        run: dotnet build bindings/csharp/managed/SvgParser -c Release
-
       - name: Assemble native binaries for packing
         run: |
           mkdir -p build/bindings/csharp/native
           cp native-artifacts/native-linux-x64/libsvgparser_c.so build/bindings/csharp/native/
           cp native-artifacts/native-win-x64/svgparser_c.dll build/bindings/csharp/native/
           cp native-artifacts/native-osx-arm64/libsvgparser_c.dylib build/bindings/csharp/native/libsvgparser_c-arm64.dylib
+
+      - name: Build managed library
+        run: dotnet build bindings/csharp/managed/SvgParser -c Release
 
       - name: Pack NuGet package
         run: nuget pack bindings/csharp/managed/SvgParser/SvgParser.nuspec -Version 1.1.0 -Properties Configuration=Release
