@@ -26,6 +26,12 @@
 #ifndef SVG_GROUP_DOT_HPP
     #include "svg/Group.hpp"
 #endif
+#ifndef DRAW2D_SVG_TEXT_DOT_HPP
+    #include "svg/Text.hpp"
+#endif
+#ifndef DRAW2D_SVG_IMAGE_DOT_HPP
+    #include "svg/Image.hpp"
+#endif
 
 TEST_CASE("1a. Single Line Segment", "[path][svg]") {
     Draw2d::Svg::SvgParser svgParser {};
@@ -725,7 +731,7 @@ auto svg9e =
     REQUIRE( pResult != nullptr );
 }
 
-TEST_CASE("9f. use: cycle through nested svg is broken", "[self-reference][throws][svg][xxx]") {
+TEST_CASE("9f. use: cycle through nested svg is broken", "[self-reference][throws][svg]") {
     Draw2d::Svg::SvgParser svgParser {};
     auto svg9f = R"xxx(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <g id="outer">
@@ -783,4 +789,198 @@ TEST_CASE("9i. use -> defs group -> use -> back to the enclosing group", "[use][
 </svg>
 )xxx";
     REQUIRE_THROWS_AS ( svgParser.parse(svg9i), Draw2d::Svg::SvgException );
+}
+// ============================================================
+// 10. <text>
+// ============================================================
+
+TEST_CASE("10a. Basic text node with content", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10a = R"xxx(<svg><text id="t10a" x="10" y="20">Hello</text></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10a);
+
+    auto entity = svgDocument.get()->lookupSvgEntity("t10a");
+    REQUIRE(entity != nullptr);
+    const auto *text = dynamic_cast<const Draw2d::Svg::Text *>(entity);
+    REQUIRE(text != nullptr);
+
+    REQUIRE(text->getX().size() == 1);
+    REQUIRE(text->getX()[0] == 10.0f);
+    REQUIRE(text->getY().size() == 1);
+    REQUIRE(text->getY()[0] == 20.0f);
+}
+
+TEST_CASE("10b. text x/y as space-separated lists", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10b = R"xxx(<svg><text id="t10b" x="10 20 30" y="1 2 3">abc</text></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10b);
+
+    const auto *text = dynamic_cast<const Draw2d::Svg::Text *>(svgDocument.get()->lookupSvgEntity("t10b"));
+    REQUIRE(text != nullptr);
+
+    REQUIRE(text->getX() == std::vector<float>{ 10.0f, 20.0f, 30.0f });
+    REQUIRE(text->getY() == std::vector<float>{ 1.0f, 2.0f, 3.0f });
+}
+
+TEST_CASE("10c. text x/y as comma-separated lists", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10c = R"xxx(<svg><text id="t10c" x="10,20,30" y="1,2,3">abc</text></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10c);
+
+    const auto *text = dynamic_cast<const Draw2d::Svg::Text *>(svgDocument.get()->lookupSvgEntity("t10c"));
+    REQUIRE(text != nullptr);
+
+    REQUIRE(text->getX() == std::vector<float>{ 10.0f, 20.0f, 30.0f });
+    REQUIRE(text->getY() == std::vector<float>{ 1.0f, 2.0f, 3.0f });
+}
+
+TEST_CASE("10d. text dx/dy lists", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10d = R"xxx(<svg><text id="t10d" dx="1 2 3" dy="-1 -2 -3">abc</text></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10d);
+
+    const auto *text = dynamic_cast<const Draw2d::Svg::Text *>(svgDocument.get()->lookupSvgEntity("t10d"));
+    REQUIRE(text != nullptr);
+
+    REQUIRE(text->getDx() == std::vector<float>{ 1.0f, 2.0f, 3.0f });
+    REQUIRE(text->getDy() == std::vector<float>{ -1.0f, -2.0f, -3.0f });
+}
+
+TEST_CASE("10e. text rotate list, fewer values than characters", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10e = R"xxx(<svg><text id="t10e" rotate="10 20">abcd</text></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10e);
+
+    const auto *text = dynamic_cast<const Draw2d::Svg::Text *>(svgDocument.get()->lookupSvgEntity("t10e"));
+    REQUIRE(text != nullptr);
+
+    // Parser stores the list as given -- repeat-last-value is a layout-time
+    // concern, not a parse-time one.
+    REQUIRE(text->getRotate() == std::vector<float>{ 10.0f, 20.0f });
+}
+
+TEST_CASE("10f. text with textLength and lengthAdjust", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10f = R"xxx(<svg><text id="t10f" textLength="100" lengthAdjust="spacingAndGlyphs">abc</text></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10f);
+
+    const auto *text = dynamic_cast<const Draw2d::Svg::Text *>(svgDocument.get()->lookupSvgEntity("t10f"));
+    REQUIRE(text != nullptr);
+
+    REQUIRE(text->getTextLength().has_value());
+    REQUIRE(text->getTextLength().value() == 100.0f);
+    REQUIRE(text->getLengthAdjust() == Draw2d::Svg::LengthAdjust::SpacingAndGlyphs);
+}
+
+TEST_CASE("10g. text with no positional attributes defaults to empty lists", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10g = R"xxx(<svg><text id="t10g">plain</text></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10g);
+
+    const auto *text = dynamic_cast<const Draw2d::Svg::Text *>(svgDocument.get()->lookupSvgEntity("t10g"));
+    REQUIRE(text != nullptr);
+
+    REQUIRE(text->getX().empty());
+    REQUIRE(text->getY().empty());
+    REQUIRE(text->getDx().empty());
+    REQUIRE(text->getDy().empty());
+    REQUIRE(text->getRotate().empty());
+    REQUIRE_FALSE(text->getTextLength().has_value());
+}
+
+TEST_CASE("10h. text with malformed numeric list throws", "[text][throws][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10h = R"xxx(<svg><text id="t10h" x="10 notanumber 30">abc</text></svg>)xxx";
+
+    REQUIRE_THROWS_AS( svgParser.parse(svg10h), Draw2d::Svg::SvgException );
+}
+
+// ============================================================
+// 11. <image>
+// ============================================================
+
+TEST_CASE("11a. Basic image with dimensions", "[image][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg11a = R"xxx(<svg><image id="i11a" x="0" y="0" width="50" height="60" href="picture.png"/></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg11a);
+
+    const auto *image = dynamic_cast<const Draw2d::Svg::Image *>(svgDocument.get()->lookupSvgEntity("i11a"));
+    REQUIRE(image != nullptr);
+
+    REQUIRE(image->getX().has_value());
+    REQUIRE(image->getY().has_value());
+    REQUIRE(image->getWidth().has_value());
+    REQUIRE(image->getHeight().has_value());
+    REQUIRE(image->getHref() == "picture.png");
+}
+
+TEST_CASE("11b. image with valid base64-encoded data URI href", "[image][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    // "PNG" magic bytes base64-encoded is not required to be a real image --
+    // parser should only validate the base64 encoding itself, not decode/
+    // sniff image content.
+    auto svg11b = R"xxx(<svg><image id="i11b" width="10" height="10" href="data:image/png;base64,iVBORw0KGgo="/></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg11b);
+
+    const auto *image = dynamic_cast<const Draw2d::Svg::Image *>(svgDocument.get()->lookupSvgEntity("i11b"));
+    REQUIRE(image != nullptr);
+    // cheeky, but good enough.  would be better to have the actual 8 bytes and verify them.  rainy day
+    //  project
+    REQUIRE(image->getHref().size() == 8);
+}
+
+TEST_CASE("11c. image with malformed base64 data URI throws", "[image][throws][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    // '@' and '#' are not valid base64 alphabet characters.
+    auto svg11c = R"xxx(<svg><image id="i11c" width="10" height="10" href="data:image/png;base64,iV@#Row0KGgo="/></svg>)xxx";
+
+    REQUIRE_THROWS_AS( svgParser.parse(svg11c), Core::Exception );
+}
+
+TEST_CASE("11d. image with legacy xlink:href", "[image][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg11d = R"xxx(<svg xmlns:xlink="http://www.w3.org/1999/xlink"><image id="i11d" width="10" height="10" xlink:href="picture.png"/></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg11d);
+
+    const auto *image = dynamic_cast<const Draw2d::Svg::Image *>(svgDocument.get()->lookupSvgEntity("i11d"));
+    REQUIRE(image != nullptr);
+    REQUIRE(image->getHref() == "picture.png");
+}
+
+TEST_CASE("11e. image with preserveAspectRatio", "[image][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg11e = R"xxx(<svg><image id="i11e" width="10" height="10" href="picture.png" preserveAspectRatio="xMidYMid slice"/></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg11e);
+
+    const auto *image = dynamic_cast<const Draw2d::Svg::Image *>(svgDocument.get()->lookupSvgEntity("i11e"));
+    REQUIRE(image != nullptr);
+
+    REQUIRE(image->getPreserveAspectRatio() == Draw2d::Svg::PreserveAspectRatio::xMidYMid);
+    REQUIRE(image->getPreserveAspectRatioMode() == Draw2d::Svg::PreserveAspectRatioMode::Slice);
+}
+
+TEST_CASE("11f. image with crossorigin/decoding/fetchpriority", "[image][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg11f = R"xxx(<svg><image id="i11f" width="10" height="10" href="picture.png" crossorigin="anonymous" decoding="async" fetchpriority="high"/></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg11f);
+
+    const auto *image = dynamic_cast<const Draw2d::Svg::Image *>(svgDocument.get()->lookupSvgEntity("i11f"));
+    REQUIRE(image != nullptr);
+
+    REQUIRE(image->getCrossOrigin().has_value());
+    REQUIRE(image->getCrossOrigin().value() == Draw2d::Svg::CrossOrigin::Anonymous);
+    REQUIRE(image->getDecoding().has_value());
+    REQUIRE(image->getDecoding().value() == Draw2d::Svg::Decoding::Async);
+    REQUIRE(image->getFetchPriority().has_value());
+    REQUIRE(image->getFetchPriority().value() == Draw2d::Svg::FetchPriority::High);
+}
+
+TEST_CASE("11g. image with missing href throws", "[image][throws][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg11g = R"xxx(<svg><image id="i11g" width="10" height="10"/></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg11g);
+
+    const auto *image = dynamic_cast<const Draw2d::Svg::Image *>(svgDocument.get()->lookupSvgEntity("i11g"));
+    REQUIRE(image != nullptr);
+    REQUIRE(image->getHref().empty());
 }

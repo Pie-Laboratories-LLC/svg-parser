@@ -38,6 +38,8 @@ namespace Core {
         String(int nValue);
         String(double dValue);
         String(unsigned nValue);
+        explicit String(bool bValue);
+
         template<typename... Args>
         String(std::format_string<Args...> fmt, Args&&... args)
             : String(std::format(fmt, std::forward<Args>(args)...)) {}
@@ -108,7 +110,7 @@ namespace Core {
 
         std::vector<Core::String> split(char delimiter,
                                         bool bSkipEmpty = true,
-                                        std::optional<size_t> maxSplits = std::nullopt);
+                                        std::optional<size_t> maxSplits = std::nullopt) const;
 
         static bool IsEmpty(const String &strString) {
             return strString.size() == 0;
@@ -120,8 +122,6 @@ namespace Core {
         }
 
         static inline std::regex WsRegex { R"xxx(\s+)xxx" }; 
-            
-
     };
 }
 

@@ -42,7 +42,13 @@ internal static class TestSvg
 {
     // Throws rather than returning null so a bad fixture SVG fails loudly at the call site
     // instead of producing a confusing NullReferenceException deeper in the test body.
-    public static SvgDocument Parse(string svgText) =>
-        new SvgParser().Parse(svgText)
+    public static SvgDocument Parse(string svgText) {
+        Console.WriteLine("1");
+        var parser = new SvgParser();
+        Console.WriteLine("2");
+        parser.EnableErrorReporting();
+        Console.WriteLine("3");
+        return parser.Parse(svgText)
             ?? throw new InvalidOperationException($"Failed to parse test SVG:\n{svgText}");
+    }
 }

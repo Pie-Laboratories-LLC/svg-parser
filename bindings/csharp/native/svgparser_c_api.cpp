@@ -9,6 +9,9 @@
 #include "svg/Path.hpp"
 #include "svg/Circle.hpp"
 #include "svg/Ellipse.hpp"
+#include "svg/Image.hpp"
+#include "svg/Text.hpp"
+#include "svg/Svg.hpp"
 #include "core/Logger.hpp"
 
 using namespace Draw2d::Svg;
@@ -63,7 +66,12 @@ void svgparser_parser_free(void* parser) {
 
 void* svgparser_parser_parse(void* parser, const char* svgText) {
     try {
+        std::cout << "er, here" << std::endl;
+        std::cout << "svgText follows " << std::endl;
+        std::cout << svgText << std::endl;
+        std::cout << "er, here 2" << std::endl;
         std::unique_ptr<SvgDocument> doc = static_cast<SvgParser*>(parser)->parse(svgText);
+        std::cout << "er, here 3" << std::endl;
         return doc.release();
     } catch (...) { return nullptr; }
 }
@@ -587,6 +595,157 @@ float svgparser_ellipse_get_ry_measurement(const void* ellipse) {
 int svgparser_ellipse_get_ry_units(const void* ellipse) {
     try { return static_cast<int>(static_cast<const Ellipse*>(ellipse)->getRy().value().enumUnits); } catch (...) { return -1; }
 }
+
+// --- Image ---
+
+const char* svgparser_image_get_href(const void* image) {
+    try { return static_cast<const Image*>(image)->getHref().c_str(); } catch (...) { return nullptr; }
+}
+
+const char* svgparser_image_get_image_type(const void* image) {
+    try { return static_cast<const Image*>(image)->getImageType().c_str(); } catch (...) { return nullptr; }
+}
+
+const char* svgparser_image_get_character_encoding(const void* image) {
+    try { return static_cast<const Image*>(image)->getCharacterEncoding().c_str(); } catch (...) { return nullptr; }
+}
+
+int svgparser_image_get_preserve_aspect_ratio(const void* image) {
+    try { return static_cast<int>(static_cast<const Image*>(image)->getPreserveAspectRatio()); } catch (...) { return 0; }
+}
+
+int svgparser_image_get_preserve_aspect_ratio_mode(const void* image) {
+    try { return static_cast<int>(static_cast<const Image*>(image)->getPreserveAspectRatioMode()); } catch (...) { return 0; }
+}
+
+int svgparser_image_get_has_cross_origin(const void* image) {
+    try { return static_cast<const Image*>(image)->getCrossOrigin().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+
+int svgparser_image_get_cross_origin(const void* image) {
+    try { return static_cast<int>(static_cast<const Image*>(image)->getCrossOrigin().value()); } catch (...) { return 0; }
+}
+
+int svgparser_image_get_has_decoding(const void* image) {
+    try { return static_cast<const Image*>(image)->getDecoding().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+
+int svgparser_image_get_decoding(const void* image) {
+    try { return static_cast<int>(static_cast<const Image*>(image)->getDecoding().value()); } catch (...) { return 0; }
+}
+
+int svgparser_image_get_has_fetch_priority(const void* image) {
+    try { return static_cast<const Image*>(image)->getFetchPriority().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+
+int svgparser_image_get_fetch_priority(const void* image) {
+    try { return static_cast<int>(static_cast<const Image*>(image)->getFetchPriority().value()); } catch (...) { return 0; }
+}
+
+// --- Text ---
+
+int svgparser_text_get_x_count(const void* text) {
+    try { return static_cast<int>(static_cast<const Text*>(text)->getX().size()); } catch (...) { return 0; }
+}
+
+void svgparser_text_get_x(const void* text, float* buffer, int bufferSize) {
+    try {
+        const auto &values = static_cast<const Text*>(text)->getX();
+        int count = std::min(bufferSize, static_cast<int>(values.size()));
+        std::copy(values.begin(), values.begin() + count, buffer);
+    } catch (...) {}
+}
+
+int svgparser_text_get_y_count(const void* text) {
+    try { return static_cast<int>(static_cast<const Text*>(text)->getY().size()); } catch (...) { return 0; }
+}
+
+void svgparser_text_get_y(const void* text, float* buffer, int bufferSize) {
+    try {
+        const auto &values = static_cast<const Text*>(text)->getY();
+        int count = std::min(bufferSize, static_cast<int>(values.size()));
+        std::copy(values.begin(), values.begin() + count, buffer);
+    } catch (...) {}
+}
+
+int svgparser_text_get_dx_count(const void* text) {
+    try { return static_cast<int>(static_cast<const Text*>(text)->getDx().size()); } catch (...) { return 0; }
+}
+
+void svgparser_text_get_dx(const void* text, float* buffer, int bufferSize) {
+    try {
+        const auto &values = static_cast<const Text*>(text)->getDx();
+        int count = std::min(bufferSize, static_cast<int>(values.size()));
+        std::copy(values.begin(), values.begin() + count, buffer);
+    } catch (...) {}
+}
+
+int svgparser_text_get_dy_count(const void* text) {
+    try { return static_cast<int>(static_cast<const Text*>(text)->getDy().size()); } catch (...) { return 0; }
+}
+
+void svgparser_text_get_dy(const void* text, float* buffer, int bufferSize) {
+    try {
+        const auto &values = static_cast<const Text*>(text)->getDy();
+        int count = std::min(bufferSize, static_cast<int>(values.size()));
+        std::copy(values.begin(), values.begin() + count, buffer);
+    } catch (...) {}
+}
+
+int svgparser_text_get_rotate_count(const void* text) {
+    try { return static_cast<int>(static_cast<const Text*>(text)->getRotate().size()); } catch (...) { return 0; }
+}
+
+void svgparser_text_get_rotate(const void* text, float* buffer, int bufferSize) {
+    try {
+        const auto &values = static_cast<const Text*>(text)->getRotate();
+        int count = std::min(bufferSize, static_cast<int>(values.size()));
+        std::copy(values.begin(), values.begin() + count, buffer);
+    } catch (...) {}
+}
+
+int svgparser_text_get_length_adjust(const void* text) {
+    try { return static_cast<int>(static_cast<const Text*>(text)->getLengthAdjust()); } catch (...) { return 0; }
+}
+
+int svgparser_text_has_text_length(const void* text) {
+    try { return static_cast<const Text*>(text)->getTextLength().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+
+float svgparser_text_get_text_length(const void* text) {
+    try { return static_cast<const Text*>(text)->getTextLength().value(); } catch (...) { return 0.0f; }
+}
+
+// --- Svg ---
+
+int svgparser_svg_get_preserve_aspect_ratio(const void* svg) {
+    try { return static_cast<int>(static_cast<const Draw2d::Svg::Svg*>(svg)->getPreserveAspectRatio()); } catch (...) { return 0; }
+}
+
+int svgparser_svg_get_preserve_aspect_ratio_mode(const void* svg) {
+    try { return static_cast<int>(static_cast<const Draw2d::Svg::Svg*>(svg)->getPreserveAspectRatioMode()); } catch (...) { return 0; }
+}
+
+int svgparser_svg_has_viewbox(const void* svg) {
+    try { return static_cast<const Draw2d::Svg::Svg*>(svg)->getViewbox().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+
+float svgparser_svg_get_viewbox_x(const void* svg) {
+    try { return static_cast<const Draw2d::Svg::Svg*>(svg)->getViewbox().value().x; } catch (...) { return 0.0f; }
+}
+
+float svgparser_svg_get_viewbox_y(const void* svg) {
+    try { return static_cast<const Draw2d::Svg::Svg*>(svg)->getViewbox().value().y; } catch (...) { return 0.0f; }
+}
+
+float svgparser_svg_get_viewbox_width(const void* svg) {
+    try { return static_cast<const Draw2d::Svg::Svg*>(svg)->getViewbox().value().width; } catch (...) { return 0.0f; }
+}
+
+float svgparser_svg_get_viewbox_height(const void* svg) {
+    try { return static_cast<const Draw2d::Svg::Svg*>(svg)->getViewbox().value().height; } catch (...) { return 0.0f; }
+}
+
 void svgparser_entity_enumerate_children(const void* entity, SvgEntityCallback callback, void* userData) {
     try {
         auto* pContainer = dynamic_cast<const SvgContainerEntity*>(static_cast<const SvgEntity*>(entity));

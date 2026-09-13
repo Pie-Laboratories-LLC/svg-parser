@@ -22,6 +22,9 @@ namespace SvgParserTests;
 public class SvgTests : IDisposable
 {
     private readonly SvgDocument _document;
+    private readonly SvgDocument _document2;
+    private readonly Svg _full;
+    private readonly Svg _bare;
 
     public SvgTests()
     {
@@ -31,6 +34,15 @@ public class SvgTests : IDisposable
               <path id="p2" d="M0,0 L2,2 Z"/>
             </svg>
             """);
+        _document2 = TestSvg.Parse("""
+            <svg id="s-bare">
+              <svg id="s-full" viewBox="10 20 300 150" preserveAspectRatio="xMidYMid slice"/>
+            </svg>
+            """);
+        _full = (Svg)_document2.lookupSvgEntity("s-full")!;
+        if(_full == null) throw new Exception("_full is not set");
+        _bare = (Svg)_document2.lookupSvgEntity("s-bare")!;
+        if(_bare == null) throw new Exception("_bare is not set");
     }
 
     public void Dispose() => _document.Dispose();
@@ -52,5 +64,30 @@ public class SvgTests : IDisposable
         List<SvgEntity> children = _document.RootSvg.enumerateChildren();
 
         Assert.Equal(["p1", "p2"], children.Select(c => c.Id));
+    }
+
+    [Fact]
+    public void ViewBox_ReturnsSetValues()
+    {
+        ViewBox? viewBox = _full.ViewBox;
+
+        Assert.NotNull(viewBox);
+        Assert.Equal(10f, viewBox!.x);
+        Assert.Equal(20f, viewBox!.y);
+        Assert.Equal(300f, viewBox!.width);
+        Assert.Equal(150f, viewBox!.height);
+    }
+
+    [Fact]
+    public void ViewBox_ReturnsNullWhenAbsent()
+    {
+        Assert.Null(_bare.ViewBox);
+    }
+
+    [Fact]
+    public void PreserveAspectRatio_ReturnsSetValue()
+    {
+        Assert.Equal(PreserveAspectRatio.xMidYMid, _full.PreserveAspectRatio);
+        Assert.Equal(PreserveAspectRatioMode.Slice, _full.PreserveAspectRatioMode);
     }
 }

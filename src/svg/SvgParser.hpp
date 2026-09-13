@@ -89,6 +89,8 @@ namespace Draw2d::Svg {
     class Rect;
     class Ellipse;
     class Circle;
+    class Image;
+    class Text;
     class SvgColour;
     class SvgPaint;
     class SvgParserContext;
@@ -147,9 +149,11 @@ namespace Draw2d::Svg {
         inline static const Core::String HEIGHT_ATTRIBUTE = "height";
         inline static const Core::String CX_ATTRIBUTE = "cx";
         inline static const Core::String CY_ATTRIBUTE = "cy";
-        inline static const Core::String R_ATTRIBUTE = "r";
+        inline static const Core::String DX_ATTRIBUTE = "dx";
+        inline static const Core::String DY_ATTRIBUTE = "dy";
         inline static const Core::String FX_ATTRIBUTE = "fx";
         inline static const Core::String FY_ATTRIBUTE = "fy";
+        inline static const Core::String R_ATTRIBUTE = "r";
         inline static const Core::String FR_ATTRIBUTE = "fr";
         inline static const Core::String SPREADMETHOD_ATTRIBUTE = "spreadMethod";
         inline static const Core::String RX_ATTRIBUTE = "rx";
@@ -160,6 +164,12 @@ namespace Draw2d::Svg {
         inline static const Core::String PRESERVEASPECTRATIO_ATTRIBUTE = "preserveAspectRatio";
         inline static const Core::String COLOR_ATTRIBUTE = "color";
         inline static const Core::String PATHLENGTH_ATTRIBUTE = "pathLength";
+        inline static const Core::String CROSSORIGIN_ATTRIBUTE = "crossorigin";
+        inline static const Core::String DECODING_ATTRIBUTE = "decoding";
+        inline static const Core::String FETCHPRIORITY_ATTRIBUTE = "fetchpriority";
+        inline static const Core::String ROTATE_ATTRIBUTE = "rotate";
+        inline static const Core::String TEXTLENGTH_ATTRIBUTE = "textLength";
+        inline static const Core::String LENGTHADJUST_ATTRIBUTE = "lengthAdjust";
         inline static const Core::String DEFINITIONS_NAME = "defs";
         inline static const Core::String GROUP_NAME = "g";
         inline static const Core::String USE_NAME = "use";
@@ -171,6 +181,9 @@ namespace Draw2d::Svg {
         inline static const Core::String RECT_NAME = "rect";
         inline static const Core::String ELLIPSE_NAME = "ellipse";
         inline static const Core::String CIRCLE_NAME = "circle";
+        inline static const Core::String IMAGE_NAME = "image";
+        inline static const Core::String IMAGE_ALTERNATE_NAME = "img";
+        inline static const Core::String TEXT_NAME = "text";
         inline static const Core::String DEGREES_UNIT = "deg";
         inline static const Core::String GRADIANS_UNIT = "grad";
         inline static const Core::String RADIANS_UNIT = "rad";
@@ -178,6 +191,8 @@ namespace Draw2d::Svg {
         inline static const Core::String NONE_VALUE = "none";
         inline static const Core::String INHERIT_VALUE = "inherit";
         inline static const Core::String AUTO_VALUE = "auto";
+        inline static const Core::String CHARSET_VALUE = "charset";
+        inline static const Core::String UTF8_VALUE = "utf-8";
         inline static constexpr float DEFAULT_VIEWPORT_SIZE = 128.0f;
 
         SvgParser();
@@ -203,10 +218,12 @@ namespace Draw2d::Svg {
         static std::regex SkewXyRegex;
         static std::regex MatrixRegex;
         static std::regex DimensionRegex;
+        static std::regex DataUriRegex;
 
     private:
         SvgParserCallback m_callback = [](SvgParserStatus, const Core::String &) {}; // noop
 
+        void __parsePreserveAspectRatio(Xml::IDomEntity *pSvgElement,PreserveAspectRatio &preserveAspectRatio,PreserveAspectRatioMode &preserveAspectRatioMode);
         const Svg *__parseSvgElement(SvgParseState &svgParseState, Xml::IDomEntity *pRootElement, SvgParserContext svgParserContext);
         void __parseGlobalScope(SvgParseState &svgParserState, Xml::IDomEntity *pParentElement, SvgParserContext svgParserContext);
 
@@ -231,9 +248,11 @@ namespace Draw2d::Svg {
         const Rect *__parseRect(SvgParseState &svgParseState, Xml::IDomEntity *pRectElement, SvgParserContext svgParserContext);
         const Ellipse *__parseEllipse(SvgParseState &svgParseState, Xml::IDomEntity *pEllipseElement, SvgParserContext svgParserContext);
         const Circle *__parseCircle(SvgParseState &svgParseState, Xml::IDomEntity *pCircleElement, SvgParserContext svgParserContext);
+        const Image *__parseImage(SvgParseState &svgParseState, Xml::IDomEntity *pImageElement, SvgParserContext svgParserContext);
+        const Text *__parseText(SvgParseState &svgParseState, Xml::IDomEntity *pTextElement, SvgParserContext svgParserContext);
 
         Core::String __retrieveHref(SvgParseState &svgParseState, Xml::IDomEntity *pElement);
-        std::vector<float> __parsePoints(const Core::String &d, size_t &pos, size_t nMaximumPoints = 0, bool bExactMaximum = false);
+        std::vector<float> __parsePoints(const Core::String &d, size_t &pos, size_t nMaximumPoints = 0, bool bExactMaximum = false, bool slurp = false);
 
         SvgPaint __parsePaint(SvgParseState &svgParseState, const Core::String &colour, SvgParserContext &svgParserContext);
         SvgColour __parseColour(SvgParseState &svgParseState, const Core::String &colour, SvgParserContext &svgParserContext);

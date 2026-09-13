@@ -16,6 +16,7 @@
 
 #include <cstring>
 #include <unordered_set>
+#include <iostream>
 
 #include "svg/SvgParser.hpp"
 
@@ -51,6 +52,12 @@
 #endif
 #ifndef DRAW2D_SVG_CIRCLE_DOT_HPP
     #include "svg/Circle.hpp"
+#endif
+#ifndef DRAW2D_SVG_IMAGE_DOT_HPP
+    #include "svg/Image.hpp"
+#endif
+#ifndef DRAW2D_SVG_TEXT_DOT_HPP
+    #include "svg/Text.hpp"
 #endif
 #ifndef DRAW2D_SVG_SVGGRADIENT_DOT_HPP
     #include "svg/SvgColour.hpp"
@@ -90,6 +97,9 @@
 #endif
 #ifndef XML_IDOMENTITY_DOT_HPP
     #include "xml/IDomEntity.hpp"
+#endif
+#ifndef CORE_BASE64_DOT_HPP
+    #include "core/Base64.hpp"
 #endif
 
 namespace Draw2d::Svg {
@@ -143,13 +153,29 @@ namespace Draw2d::Svg {
     std::regex SvgParser::SkewXyRegex { R"xxx(^\s*skew([XY])\(([^)]+)\))xxx", std::regex::icase };
     std::regex SvgParser::MatrixRegex { R"xxx(^\s*matrix\(([^)]+)\))xxx", std::regex::icase };
     std::regex SvgParser::DimensionRegex { R"xxx(([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)\s*(%|px|pt|pc|cm|mm|in|q|em|ex|ch|rem|vw|vh|vmin|vmax)?)xxx", std::regex::icase };
+    std::regex SvgParser::DataUriRegex { R"xxx(^data:image/(png|gif|jpe?g|svg\+xml)((?:;(?!base64\s*,)[a-zA-Z0-9\-]+(?:=[^;,]*)?)*)(;base64)?,)xxx", std::regex::icase };
 
+
+    void SvgParser::__parsePreserveAspectRatio(Xml::IDomEntity *pSvgElement,PreserveAspectRatio &preserveAspectRatio,PreserveAspectRatioMode &preserveAspectRatioMode)
+    {
+        Core::String strPreserveAspectRatio { };
+        if(pSvgElement->tryGetAttribute(PRESERVEASPECTRATIO_ATTRIBUTE, strPreserveAspectRatio)) {
+            std::vector<Core::String> parts = strPreserveAspectRatio.regex_split(Core::String::WsRegex);
+            if(parts.size() != 1 && parts.size() != 2) throw SvgException("Invalid preserveAspectRatio {}. expected one or two distinct strings, got {}",strPreserveAspectRatio.c_str(), parts.size());
+            preserveAspectRatio = ParsePreserveAspectRatio(parts[0]);
+            preserveAspectRatioMode = PreserveAspectRatioMode::Meet;
+            if(parts.size() == 2) {
+                preserveAspectRatioMode = ParsePreserveAspectRatioMode(parts[1]);
+            }
+        }
+    }
 
     const Svg *SvgParser::__parseSvgElement(SvgParseState &svgParseState, Xml::IDomEntity *pSvgElement, SvgParserContext svgParserContext)
     {
         SvgSvgParams svgSvgParams { SvgContainerParams { SvgEntityParams { .svgDocument = svgParseState.svgDocument } } };
 
         __updateInheritedProperties(svgParseState, pSvgElement, svgParserContext);
+        __parseCommonProperties(svgParseState, pSvgElement, svgSvgParams, svgParserContext);
 
         // paranoia will destroya.  TODO - we don't validate any other tag names like this
         //  the other methods could profit from this
@@ -176,16 +202,9 @@ namespace Draw2d::Svg {
             svgParserContext.setViewportWidth(viewBox[2]);
             svgParserContext.setViewportHeight(viewBox[2]);
         }
-        Core::String strPreserveAspectRatio { };
-        if(pSvgElement->tryGetAttribute(PRESERVEASPECTRATIO_ATTRIBUTE, strPreserveAspectRatio)) {
-            std::vector<Core::String> parts = strPreserveAspectRatio.regex_split(Core::String::WsRegex);
-            if(parts.size() != 1 && parts.size() != 2) throw SvgException("Invalid preserveAspectRatio {}. expected one or two distinct strings, got {}",strPreserveAspectRatio.c_str(), parts.size());
-            svgSvgParams.preserveAspectRatio = ParsePreserveAspectRatio(parts[0]);
-            svgSvgParams.preserveAspectRatioMode = PreserveAspectRatioMode::Meet;
-            if(parts.size() == 2) {
-                svgSvgParams.preserveAspectRatioMode = ParsePreserveAspectRatioMode(parts[1]);
-            }
-        }
+
+        __parsePreserveAspectRatio(pSvgElement,svgSvgParams.preserveAspectRatio,svgSvgParams.preserveAspectRatioMode);
+
         std::unique_ptr<Svg> pSvg = std::make_unique<Svg>(std::move(svgSvgParams));
 
         Svg *toReturn = nullptr;
@@ -217,7 +236,7 @@ namespace Draw2d::Svg {
     {
         __updateInheritedProperties(svgParseState, pParentElement, svgParserContext);
 
-        for(std::unique_ptr<Xml::IDomEntity> pChildNode = std::move(pParentElement->getFirstChild());
+        for(std::unique_ptr<Xml::IDomEntity> pChildNode = pParentElement->getFirstChild();
             pChildNode; pChildNode = pChildNode->getNextSibling())
         {
             Core::String strName = pChildNode->getTagName();
@@ -236,6 +255,7 @@ namespace Draw2d::Svg {
             }
             else if(strName == GROUP_NAME || strName == PATH_NAME || strName == USE_NAME
                  || strName == RECT_NAME || strName == CIRCLE_NAME || strName == ELLIPSE_NAME
+                 || strName == TEXT_NAME || strName == IMAGE_NAME || strName == IMAGE_ALTERNATE_NAME 
                  || strName == SVG_NAME) {
                 (void) __parseSvgEntity(svgParseState, pChildNode.get(), svgParserContext);
             }
@@ -310,7 +330,7 @@ namespace Draw2d::Svg {
         //  bueno; I blame designers for not ensuring their matrices are idempotent.
 
         Core::String strChildElementName = pChildElement->getTagName();
-        
+
         if(strChildElementName == USE_NAME) {
             cpSvgEntity = __parseUse(svgParseState, pChildElement, svgParserContext);
         }
@@ -333,6 +353,14 @@ namespace Draw2d::Svg {
         else if(strChildElementName == CIRCLE_NAME)
         {
             cpSvgEntity = __parseCircle(svgParseState, pChildElement, svgParserContext);
+        }
+        else if(strChildElementName == IMAGE_NAME || strChildElementName == IMAGE_ALTERNATE_NAME)
+        {
+            cpSvgEntity = __parseImage(svgParseState, pChildElement, svgParserContext);
+        }
+        else if(strChildElementName == TEXT_NAME)
+        {
+            cpSvgEntity = __parseText(svgParseState, pChildElement, svgParserContext);
         }
         else if(strChildElementName == SVG_NAME)
         {
@@ -507,7 +535,7 @@ namespace Draw2d::Svg {
             });
         }
 
-        for(std::unique_ptr<Xml::IDomEntity> pChildNode = std::move(pGroupElement->getFirstChild());
+        for(std::unique_ptr<Xml::IDomEntity> pChildNode = pGroupElement->getFirstChild();
             pChildNode; pChildNode = pChildNode->getNextSibling())
         {
             const SvgEntity *cpSvgEntity = __parseSvgEntity(svgParseState, pChildNode.get(), svgParserContext);
@@ -590,7 +618,6 @@ namespace Draw2d::Svg {
 
             // we'll set the use node as the child wrangler so this child node is assigned
             //  to it.
-            SvgContainerEntity *pChildWrangler = svgParserContext.getChildWrangler();
             svgParserContext.setChildWrangler(toReturn);
 
             // we don't care about the result here, Because we sat use as the
@@ -661,6 +688,141 @@ namespace Draw2d::Svg {
         return toReturn;
     }
 
+    const Image *SvgParser::__parseImage(SvgParseState &svgParseState, Xml::IDomEntity *pImageElement, SvgParserContext svgParserContext)
+    {
+        SvgImageParams svgImageParams { SvgEntityParams { .svgDocument = svgParseState.svgDocument } };
+
+        __updateInheritedProperties(svgParseState, pImageElement, svgParserContext);
+        __parseCommonProperties(svgParseState, pImageElement, svgImageParams, svgParserContext);
+
+        auto [ x, y, width, height ] = __parseDimensions(svgParseState, pImageElement);
+
+        svgImageParams.svgDimensionedParams.x = x;
+        svgImageParams.svgDimensionedParams.y = y;
+        svgImageParams.svgDimensionedParams.width = width;
+        svgImageParams.svgDimensionedParams.height = height;
+
+        svgImageParams.href = __retrieveHref(svgParseState, pImageElement);
+        std::cmatch dataUriMatch;
+        if(std::regex_search(svgImageParams.href.c_str(), dataUriMatch, SvgParser::DataUriRegex)) {
+            svgImageParams.imageType = dataUriMatch[1].str();
+            Core::String strKvps = dataUriMatch[2].str();
+            auto kvps = strKvps.split(';');
+            for(const auto &kvp : kvps) {
+                auto parts = kvp.split('=', true, 2);
+                const Core::String &cstrKey = parts[0].trim();
+                if(cstrKey == CHARSET_VALUE) {
+                    const Core::String &cstrValue = parts[1].trim();
+                    if(cstrValue != UTF8_VALUE) throw SvgException("Invalid value for charset in a data uri; only {} is supported, not {}", UTF8_VALUE, cstrValue);
+                    if(!Core::String::IsEmpty(svgImageParams.characterEncoding)) throw SvgException("charset is multiply defined {}; previous value was {}", cstrValue, svgImageParams.characterEncoding);
+                    svgImageParams.characterEncoding = cstrValue;
+                }
+            }
+            // if ";base64" is specified, decode the href.
+            if(dataUriMatch[3].str().length()) {
+                Core::String strEncoded = svgImageParams.href.substr(dataUriMatch[0].str().length());
+                auto decodedBytes = Core::base64Decode(strEncoded);
+                std::string bytes(decodedBytes.begin(), decodedBytes.end());
+                svgImageParams.href = bytes;
+            }
+            else {
+                // strip off the data uri
+                svgImageParams.href = svgImageParams.href.substr(dataUriMatch[0].str().length());
+            }
+        }
+
+        __parsePreserveAspectRatio(pImageElement,svgImageParams.preserveAspectRatio,svgImageParams.preserveAspectRatioMode);
+        Core::String strCrossOrigin { };
+        if (pImageElement->tryGetAttribute(CROSSORIGIN_ATTRIBUTE,strCrossOrigin)) {
+            svgImageParams.crossOrigin = ParseCrossOrigin(strCrossOrigin);
+        }
+
+        Core::String strDecoding { };
+        if (pImageElement->tryGetAttribute(DECODING_ATTRIBUTE,strDecoding)
+         && strDecoding != AUTO_VALUE) {
+            svgImageParams.decoding = ParseDecoding(strDecoding);
+        }
+
+        Core::String strFetchPriority { };
+        if (pImageElement->tryGetAttribute(FETCHPRIORITY_ATTRIBUTE,strFetchPriority)
+         && strFetchPriority != AUTO_VALUE) {
+            svgImageParams.fetchPriority = ParseFetchPriority(strFetchPriority);
+        }
+
+        std::unique_ptr<Image> pImage = std::make_unique<Image>(std::move(svgImageParams));
+        Image *toReturn = svgParserContext.getChildWrangler()->addChildAs(std::move(pImage));
+        __saveEntityToDocument(svgParseState, toReturn);
+        return toReturn;
+    }
+
+    const Text *SvgParser::__parseText(SvgParseState &svgParseState, Xml::IDomEntity *pTextElement, SvgParserContext svgParserContext)
+    {
+        SvgTextParams svgTextParams { SvgEntityParams { .svgDocument = svgParseState.svgDocument } };
+
+        __updateInheritedProperties(svgParseState, pTextElement, svgParserContext);
+        __parseCommonProperties(svgParseState, pTextElement, svgTextParams, svgParserContext);
+
+        Core::String strX { };
+        size_t nPosition = 0;
+        if (pTextElement->tryGetAttribute(X_ATTRIBUTE,strX)) {
+            svgTextParams.x = __parsePoints(strX, nPosition, 0, false, true);
+        }
+
+        Core::String strY { };
+        nPosition = 0;
+        if (pTextElement->tryGetAttribute(Y_ATTRIBUTE,strY)) {
+            svgTextParams.y = __parsePoints(strY, nPosition, 0, false, true);
+        }
+
+        Core::String strDx { };
+        nPosition = 0;
+        if (pTextElement->tryGetAttribute(DX_ATTRIBUTE,strDx)) {
+            svgTextParams.dx = __parsePoints(strDx, nPosition, 0, false, true);
+        }
+
+        Core::String strDy { };
+        nPosition = 0;
+        if (pTextElement->tryGetAttribute(DY_ATTRIBUTE,strDy)) {
+            svgTextParams.dy = __parsePoints(strDy, nPosition, 0, false, true);
+        }
+
+        Core::String strRotate { };
+        nPosition = 0;
+        if (pTextElement->tryGetAttribute(ROTATE_ATTRIBUTE,strRotate)) {
+            svgTextParams.rotate = __parsePoints(strRotate, nPosition, 0, false, true);
+        }
+
+        Core::String strLengthAdjust { };
+        if (pTextElement->tryGetAttribute(LENGTHADJUST_ATTRIBUTE,strLengthAdjust)) {
+            svgTextParams.lengthAdjust = ParseLengthAdjust(strLengthAdjust);
+        }
+
+        Core::String strTextLength { };
+        if (pTextElement->tryGetAttribute(TEXTLENGTH_ATTRIBUTE,strTextLength)) {
+            auto rit = strTextLength.rbegin();
+            // Skip trailing whitespace first (handles "50%", "50 %", and "50   ")
+            while (rit != strTextLength.rend() && std::isspace(static_cast<unsigned char>(*rit)))
+                ++rit;
+
+            if (rit != strTextLength.rend() && *rit == '%')
+            {
+                svgTextParams.textLengthPercentage = true;
+                ++rit;
+                // Skip any whitespace between the number and the '%' too, e.g. "50   %"
+                while (rit != strTextLength.rend() && std::isspace(static_cast<unsigned char>(*rit)))
+                    ++rit;
+            }
+
+            strTextLength.erase(rit.base(), strTextLength.end());
+            svgTextParams.textLength = ParseFloat(strTextLength);
+        }
+
+        std::unique_ptr<Text> pText = std::make_unique<Text>(std::move(svgTextParams));
+        Text *toReturn = svgParserContext.getChildWrangler()->addChildAs(std::move(pText));
+        __saveEntityToDocument(svgParseState, toReturn);
+        return toReturn;
+    }
+
     Core::String SvgParser::__retrieveHref(SvgParseState &svgParseState, Xml::IDomEntity *pElement)
     {
         // spec drops http://www.w3.org/1999/xlink namespace on href but still supports it.
@@ -683,7 +845,7 @@ namespace Draw2d::Svg {
         return strXlinkHref;
     }
 
-    std::vector<float> SvgParser::__parsePoints(const Core::String &d, size_t &pos, size_t nMaximumPoints, bool bExactMaximum)
+    std::vector<float> SvgParser::__parsePoints(const Core::String &d, size_t &pos, size_t nMaximumPoints, bool bExactMaximum, bool slurp)
     {
         std::vector<float> points { };
         unsigned nextIndex = pos;
@@ -716,6 +878,8 @@ namespace Draw2d::Svg {
         }
 
         if(bExactMaximum && nMaximumPoints && points.size() != nMaximumPoints) throw SvgException("Expected exactly {} points; wound up with {}", nMaximumPoints, points.size());
+
+        if(slurp && nextIndex != d.length()) throw SvgException("Expected to extract points from the entire string, but wound up at index {} of {}",nextIndex, d.length());
 
         return points;
     }
@@ -1200,7 +1364,7 @@ namespace Draw2d::Svg {
     std::vector<Stop<SvgColour>> SvgParser::__parseStops(SvgParseState &svgParseState, Xml::IDomEntity *pStopsEntity, SvgParserContext &svgParserContext)
     {
         std::vector<Stop<SvgColour>> results { };
-        for(std::unique_ptr<Xml::IDomEntity> pStopNode = std::move(pStopsEntity->getFirstChild());
+        for(std::unique_ptr<Xml::IDomEntity> pStopNode = pStopsEntity->getFirstChild();
             pStopNode; pStopNode = pStopNode->getNextSibling())
         {
             float offset;

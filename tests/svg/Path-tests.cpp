@@ -33,7 +33,7 @@ namespace {
     }
 }
 
-TEST_CASE("Path::getX (HorizontalLineTo overload): pulls x from points, y from supplied value", "[svg-path][regression][xxx]") {
+TEST_CASE("Path::getX (HorizontalLineTo overload): pulls x from points, y from supplied value", "[svg-path][regression]") {
     SvgDocument doc {};
     Path path = makePath(doc, { 0.0f, 0.0f, 9.0f }, { PathMove::MoveTo, PathMove::HorizontalLineTo });
 

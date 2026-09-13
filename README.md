@@ -17,7 +17,7 @@ a complete implementation of the SVG specification.  In broad strokes, it
 supports:
 
 * `<path>`, `<rect>`, `<group>`, `<use>`, `<ellipse>`, `<circle>`, `<defs>`
-* `<linearGradient>`, `<radialGradient>`
+* `<linearGradient>`, `<radialGradient>`, `<text>`, `<image>`
 * fill and stroke operations and "currentColor"
 * limited support for the CSS `var()` primitive in colour attributes, e.g.
   `fill="var(--currentColor,#deadbeef)"`, but see
@@ -49,6 +49,8 @@ optional.  See [Alternatives to Xerces](#alternatives-to-xerces) and
   includes the href, but the inheritance mechanism is not implemented.
 * there's currently no provision for looking up colors specified via
 `--colorN`.  Colours using this pattern are preserved in the AST.
+* dx and dy on `<text>` nodes do not support percentages.  This is something
+ not ever likely to change
 
 # IMPLEMENTATION NOTES
 The SvgParser creates an abstract syntax tree.  It doesn't strictly look like a
@@ -324,6 +326,7 @@ dotnet run simple.cs
 
 
 # ROADMAP
+
 These are short-term goals:
 
 * make the XML abstraction layer less Xerces-shaped.  The abstraction layer was
@@ -349,6 +352,8 @@ These are mid-term goals:
 * support for CSS styling.  Currently I grab any style text I find and append it
   into a string in the SvgDocument, and that's as much as I do.  I want to be
   sure to support CSS styling as commonly occurs in SVG documents.
+* github actions to build the nuget package, including binaries for Mac, Linux,
+  and Windows.
 
 Longer term goals:
 

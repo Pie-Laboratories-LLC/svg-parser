@@ -31,4 +31,20 @@ public class Svg: SvgEntity, ISvgDimensionedEntity, ISvgContainerEntity {
     public Dimension? Y => SvgHelpers.GetDimensionedY(_svg);
     public Dimension? Width => SvgHelpers.GetDimensionedWidth(_svg);
     public Dimension? Height => SvgHelpers.GetDimensionedHeight(_svg);
+
+    public ViewBox? ViewBox {
+        get {
+            if(SvgParserNative.svgparser_svg_has_viewbox(_svg) == 0) return null;
+            ViewBox viewBox = new ViewBox() {
+                x = SvgParserNative.svgparser_svg_get_viewbox_x(_svg),
+                y = SvgParserNative.svgparser_svg_get_viewbox_y(_svg),
+                width = SvgParserNative.svgparser_svg_get_viewbox_width(_svg),
+                height = SvgParserNative.svgparser_svg_get_viewbox_height(_svg),
+            };
+            return viewBox;
+        }
+    }
+
+    public PreserveAspectRatio PreserveAspectRatio => SvgParserNative.GetPreserveAspectRatio_Svg(_svg);
+    public PreserveAspectRatioMode PreserveAspectRatioMode => SvgParserNative.GetPreserveAspectRatioMode_Svg(_svg);
 }

@@ -65,14 +65,14 @@ namespace Draw2d::Svg {
 
     /// calculates the y value of a 2d vector given an svg 6-element matrix
     template<typename T>
-    T multiply4X(const T *cpLeft, T x, T y) {
+    T multiply4X(const std::array<T,6> &cpLeft, T x, T y) {
         T originalX = x;
         T originalY = y;
         return originalX * cpLeft[0] + originalY * cpLeft[2];
     }
 
     template<typename T>
-    T multiply4Y(const T *cpLeft, T x, T y) {
+    T multiply4Y(const std::array<T,6> &cpLeft, T x, T y) {
         T originalX = x;
         T originalY = y;
         return originalX * cpLeft[1] + originalY * cpLeft[3];

@@ -39,6 +39,12 @@ namespace Core {
         *this = pszBuffer;
     }
 
+    String::String(bool bValue)
+    {
+        if (bValue) *this = "true";
+        else *this = "false";
+    }
+
     void String::trim_in_place(char cTrimCharacter)
 
     {
@@ -122,7 +128,7 @@ namespace Core {
 
     std::vector<Core::String> String::split(char delimiter,
                                             bool bSkipEmpty,
-                                            std::optional<size_t> maxSplits)
+                                            std::optional<size_t> maxSplits) const
     {
         std::vector<Core::String> result;
         std::string_view sv(c_str());

@@ -27,6 +27,8 @@ public static class SvgHelpers {
 
     public static SvgEntity MakeCorrectEntity(IntPtr entity) {
         switch (SvgParserNative.PtrToString(SvgParserNative.svgparser_entity_get_type(entity))) {
+        case "Text": return new Text(entity);
+        case "Image": return new Image(entity);
         case "Rect": return new Rect(entity);
         case "Circle": return new Circle(entity);
         case "Ellipse": return new Ellipse(entity);

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <unordered_set>
+
 #define CATCH_CONFIG_RUNNER
 #include <catch2/catch_all.hpp>
 
@@ -21,12 +23,17 @@
     #include <xercesc/util/PlatformUtils.hpp>
 #endif
 
+#include "core/Logger.hpp"
+#include "draw2d/LoggingCategories.hpp"
+
 int main(int argc, char* argv[]) {
 #ifdef SVGPARSER_WITH_XERCES
     // Required before any Xerces-C parsing call; SvgParser has no lazy
     // self-init, so callers of the library carry this same obligation.
     xercesc::XMLPlatformUtils::Initialize();
 #endif
+
+    Core::Logger::Instance(std::unordered_set<const char *,CStrHash,CStrEq> { Draw2d::LoggingCategories::SVG, Draw2d::LoggingCategories::FONTZ }, Core::Info);
 
     int result = Catch::Session().run(argc, argv);
 

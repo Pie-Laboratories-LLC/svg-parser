@@ -152,5 +152,42 @@ SVGPARSER_API int   svgparser_ellipse_has_ry(const void* ellipse);
 SVGPARSER_API float svgparser_ellipse_get_ry_measurement(const void* ellipse);
 SVGPARSER_API int   svgparser_ellipse_get_ry_units(const void* ellipse);
 
+// --- Image ---
+SVGPARSER_API const char *svgparser_image_get_href(const void* image);
+SVGPARSER_API const char *svgparser_image_get_image_type(const void* image);
+SVGPARSER_API const char *svgparser_image_get_character_encoding(const void* image);
+SVGPARSER_API int         svgparser_image_get_preserve_aspect_ratio(const void* image);
+SVGPARSER_API int         svgparser_image_get_preserve_aspect_ratio_mode(const void* image);
+SVGPARSER_API int         svgparser_image_get_has_cross_origin(const void* image);
+SVGPARSER_API int         svgparser_image_get_cross_origin(const void* image);
+SVGPARSER_API int         svgparser_image_get_has_decoding(const void* image);
+SVGPARSER_API int         svgparser_image_get_decoding(const void* image);
+SVGPARSER_API int         svgparser_image_get_has_fetch_priority(const void* image);
+SVGPARSER_API int         svgparser_image_get_fetch_priority(const void* image);
+
+// --- Text ---
+SVGPARSER_API int   svgparser_text_get_x_count(const void* text);
+SVGPARSER_API void  svgparser_text_get_x(const void* text, float* buffer, int bufferSize);
+SVGPARSER_API int   svgparser_text_get_y_count(const void* text);
+SVGPARSER_API void  svgparser_text_get_y(const void* text, float* buffer, int bufferSize);
+SVGPARSER_API int   svgparser_text_get_dx_count(const void* text);
+SVGPARSER_API void  svgparser_text_get_dx(const void* text, float* buffer, int bufferSize);
+SVGPARSER_API int   svgparser_text_get_dy_count(const void* text);
+SVGPARSER_API void  svgparser_text_get_dy(const void* text, float* buffer, int bufferSize);
+SVGPARSER_API int   svgparser_text_get_rotate_count(const void* text);
+SVGPARSER_API void  svgparser_text_get_rotate(const void* text, float* buffer, int bufferSize);
+SVGPARSER_API int   svgparser_text_get_length_adjust(const void* text);
+SVGPARSER_API int   svgparser_text_has_text_length(const void* text);
+SVGPARSER_API float svgparser_text_get_text_length(const void* text);
+
+// --- Svg ---
+SVGPARSER_API int   svgparser_svg_get_preserve_aspect_ratio(const void* svg);
+SVGPARSER_API int   svgparser_svg_get_preserve_aspect_ratio_mode(const void* svg);
+SVGPARSER_API int   svgparser_svg_has_viewbox(const void* svg);
+SVGPARSER_API float svgparser_svg_get_viewbox_x(const void* svg);
+SVGPARSER_API float svgparser_svg_get_viewbox_y(const void* svg);
+SVGPARSER_API float svgparser_svg_get_viewbox_width(const void* svg);
+SVGPARSER_API float svgparser_svg_get_viewbox_height(const void* svg);
+
 // --- Enumeration (callback-based) ---
 SVGPARSER_API void svgparser_entity_enumerate_children(const void* entity, SvgEntityCallback callback, void* userData);

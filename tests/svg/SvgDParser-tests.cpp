@@ -39,7 +39,6 @@ public:
         // Runs before EVERY TEST_CASE. Swap for whatever actually
         // initializes your Logger singleton -- e.g. setting a sink,
         // a minimum level, etc.
-        Core::Logger::Instance({}, Core::LogLevel::Warn);
     }
 };
 CATCH_REGISTER_LISTENER(LoggerFixtureListener)
@@ -123,7 +122,7 @@ TEST_CASE("1h. cubic bezier relative matches absolute", "[svg-d]") {
         REQUIRE( pointsAbs[i] == Catch::Approx(pointsRel[i]) );
 }
 
-TEST_CASE("1i. smooth cubic reflects previous control point", "[svg-d][xxx]") {
+TEST_CASE("1i. smooth cubic reflects previous control point", "[svg-d]") {
     // S after C should reflect C's second control point through current point.
     // C10 0 10 10 20 10  ->  second control (10,10), endpoint (20,10)
     // S30 0 40 10        ->  reflected first control = 2*(20,10) - (10,10) = (30,10)

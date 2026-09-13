@@ -45,7 +45,7 @@ namespace Draw2d::Svg {
         std::vector<const SvgEntity *> svgEntities;
     };
 
-    class Svg  : public SvgContainerEntity
+    class Svg : public SvgContainerEntity
     {
     public:
         Svg (SvgSvgParams svgSvgParams):
@@ -63,11 +63,11 @@ namespace Draw2d::Svg {
         const SvgDimensionedEntity *getDimensionedEntity() const override { return &m_svgDimensionedEntity; }
         std::optional<Viewbox> getViewbox() const { return m_viewbox; }
         void setViewbox(Viewbox viewbox) { m_viewbox = viewbox; }
-        PreserveAspectRatio m_preserveAspectRatio() const { return m_enumPreserveAspectRatio; }
-        PreserveAspectRatioMode m_preserveAspectRatioMode() const { return m_enumPreserveAspectRatioMode; }
+        PreserveAspectRatio getPreserveAspectRatio() const { return m_enumPreserveAspectRatio; }
+        PreserveAspectRatioMode getPreserveAspectRatioMode() const { return m_enumPreserveAspectRatioMode; }
 
-        std::unique_ptr<float[]> computeViewboxTransform(float fViewportX, float fViewportY,
-                                                         float fViewportWidth, float fViewportHeight) const;
+        std::array<float,6> computeViewboxTransform(float fViewportX, float fViewportY,
+                                                    float fViewportWidth, float fViewportHeight) const;
         virtual SvgEntity *addChild(std::unique_ptr<SvgEntity> pSvgEntity) override {
             m_svgEntities.push_back(std::move(pSvgEntity));
             return m_svgEntities.back().get();

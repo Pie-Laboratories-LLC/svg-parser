@@ -67,6 +67,8 @@ namespace Draw2d::Svg {
 
         const SvgEntity *lookupSvgEntity(const Core::String &cstrId) const {
             if(!m_pSvg) throw SvgException("Root <svg...> hasn't been set");
+            // d'ont forget to check the root element
+            if(m_pSvg->getId() == cstrId) return m_pSvg.get();
             for(const auto &pEntity : m_pSvg->enumerateDescendants()) {
                 if(pEntity->getId() == cstrId) return pEntity;
             }

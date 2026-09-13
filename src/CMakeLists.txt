@@ -3,6 +3,7 @@ add_library(svgparser
     core/Logger.cpp
     core/StdNumeric.cpp
     core/String.cpp
+    core/Base64.cpp
     data-structures/tree/GeneralTree.cpp
     draw2d/GradientUnits.cpp
     draw2d/Point.cpp
@@ -28,6 +29,10 @@ add_library(svgparser
     svg/SvgPaint.cpp
     svg/SvgParser.cpp
     svg/SvgParserContext.cpp
+    svg/CrossOrigin.cpp
+    svg/Decoding.cpp
+    svg/FetchPriority.cpp
+    svg/LengthAdjust.cpp
 )
 add_library(svgparser::svgparser ALIAS svgparser)
 
@@ -64,6 +69,8 @@ if(SVGPARSER_WITH_XERCES)
     target_link_libraries(svgparser PUBLIC XercesC::XercesC)
     target_compile_definitions(svgparser PUBLIC SVGPARSER_WITH_XERCES=1)
 endif()
+
+target_link_libraries(svgparser PRIVATE OpenSSL::Crypto)
 
 install(TARGETS svgparser
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

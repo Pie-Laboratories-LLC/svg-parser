@@ -33,6 +33,8 @@ namespace Core {
 
     int ParseInteger(const String &cstrInteger,unsigned base = BASE10,unsigned offset = 0,unsigned size = std::numeric_limits<unsigned>::max());
 
+    int ParseUnsigned(const String &cstrUnsigned,unsigned base = BASE10,unsigned offset = 0,unsigned size = std::numeric_limits<unsigned>::max());
+
 } // namespace Core
 
 #endif  /* CORE_STDNUMERIC_DOT_HPP */

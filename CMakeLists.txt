@@ -45,6 +45,13 @@ if(NOT SVGPARSER_WITH_XERCES)
         "before disabling it.")
 endif()
 
+option(ENABLE_ASAN "Build with AddressSanitizer" OFF)
+
+if(ENABLE_ASAN)
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer -g)
+    add_link_options(-fsanitize=address)
+endif()
+
 # Found here rather than in src/CMakeLists.txt so that the imported
 # XercesC::XercesC target is available to every subdirectory that needs it
 # (src, and bindings/csharp/native), not just whichever one happens to be
@@ -52,6 +59,8 @@ endif()
 if(SVGPARSER_WITH_XERCES)
     find_package(XercesC REQUIRED)
 endif()
+
+find_package(OpenSSL REQUIRED)
 
 add_subdirectory(src)
 

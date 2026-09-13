@@ -27,8 +27,8 @@ namespace Draw2d::Svg {
     }
 
     /// claude (Anthropic) generated.
-    std::unique_ptr<float[]> Svg::computeViewboxTransform(float fViewportX, float fViewportY,
-                                                          float fViewportWidth, float fViewportHeight) const
+    std::array<float,6> Svg::computeViewboxTransform(float fViewportX, float fViewportY,
+                                                     float fViewportWidth, float fViewportHeight) const
     {
         if(m_enumPreserveAspectRatio == PreserveAspectRatio::NotAPreserveAspectRatio) {
             throw SvgException("PreserveAspectRatio was never set!");
@@ -38,7 +38,7 @@ namespace Draw2d::Svg {
         }
     
         if(!m_viewbox.has_value()) {
-            return Core::makeUniqueArray({ 1.0f, 0.0f, 0.0f, 1.0f, fViewportX, fViewportY });
+            return { 1.0f, 0.0f, 0.0f, 1.0f, fViewportX, fViewportY };
         }
         const Viewbox &vb = m_viewbox.value();
     
@@ -88,6 +88,6 @@ namespace Draw2d::Svg {
                 break;
         }
 
-        return Core::makeUniqueArray({ fScaleX, 0.0f, 0.0f, fScaleY, fTranslateX, fTranslateY });
+        return { fScaleX, 0.0f, 0.0f, fScaleY, fTranslateX, fTranslateY };
     }
 }

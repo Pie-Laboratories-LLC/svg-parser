@@ -62,4 +62,23 @@ namespace Core {
         return nResult;
     }
 
+    int ParseUnsigned(const String &cstrUnsigned,unsigned base,unsigned offset,unsigned size) {
+        if(size == std::numeric_limits<unsigned>::max()) size = cstrUnsigned.length();
+
+        unsigned nResult;
+
+        auto [ptr, ec] = std::from_chars(cstrUnsigned.c_str() + offset, cstrUnsigned.c_str() + offset + size, nResult, base);
+
+        if (ec == std::errc()) {
+            if(cstrUnsigned.c_str() + offset + size != ptr) throw Exception("Extra characters at end: {}", cstrUnsigned.substr(offset, size).c_str());
+        } else if (ec == std::errc::invalid_argument) {
+            throw Exception("Not a valid float: {}",cstrUnsigned.substr(offset,size).c_str());
+        } else if (ec == std::errc::result_out_of_range) {
+            throw Exception("Value out of range: {}", cstrUnsigned.substr(offset,size).c_str());
+        }
+        else throw Exception("Internal error, unsigned didn't parse correctly: {}", cstrUnsigned.substr(offset,size).c_str());
+
+        return nResult;
+    }
+
 } // namespace Core
