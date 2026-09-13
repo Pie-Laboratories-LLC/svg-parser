@@ -21,3 +21,14 @@ target_compile_features(svgparser_c PRIVATE cxx_std_23)
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     target_compile_options(svgparser_c PRIVATE -fcoroutines)
 endif()
+
+# Force a flat, configuration-independent output directory so the C# .csproj's
+# hardcoded copy-step path (build/bindings/csharp/native/...) works the same
+# way on multi-config generators (Visual Studio) as it does on single-config
+# ones (Makefiles/Ninja on Linux/Mac) -- MSVC's generator otherwise nests
+# output under a Debug/ or Release/ subdirectory.
+set_target_properties(svgparser_c PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bindings/csharp/native"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/bindings/csharp/native"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/bindings/csharp/native"
+)
