@@ -44,7 +44,7 @@ public class Text: SvgEntity {
         get {
             int dxCount = SvgParserNative.svgparser_text_get_dx_count(_text);
             float []dx = new float[dxCount];
-            SvgParserNative.svgparser_text_get_x(_text, dx, dxCount);
+            SvgParserNative.svgparser_text_get_dx(_text, dx, dxCount);
             return dx;
         }
     }
@@ -53,7 +53,7 @@ public class Text: SvgEntity {
         get {
             int dyCount = SvgParserNative.svgparser_text_get_dy_count(_text);
             float []dy = new float[dyCount];
-            SvgParserNative.svgparser_text_get_x(_text, dy, dyCount);
+            SvgParserNative.svgparser_text_get_dy(_text, dy, dyCount);
             return dy;
         }
     }

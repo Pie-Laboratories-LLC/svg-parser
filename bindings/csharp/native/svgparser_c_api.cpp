@@ -66,12 +66,7 @@ void svgparser_parser_free(void* parser) {
 
 void* svgparser_parser_parse(void* parser, const char* svgText) {
     try {
-        std::cout << "er, here" << std::endl;
-        std::cout << "svgText follows " << std::endl;
-        std::cout << svgText << std::endl;
-        std::cout << "er, here 2" << std::endl;
         std::unique_ptr<SvgDocument> doc = static_cast<SvgParser*>(parser)->parse(svgText);
-        std::cout << "er, here 3" << std::endl;
         return doc.release();
     } catch (...) { return nullptr; }
 }

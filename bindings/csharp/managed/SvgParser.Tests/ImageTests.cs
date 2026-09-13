@@ -27,21 +27,19 @@ public class ImageTests : IDisposable
 
     public ImageTests()
     {
-        Console.WriteLine("Here 1");
+        // "hello" base64-encoded is "aGVsbG8=" -- chosen so the expected decoded
+        // bytes are trivially human-verifiable rather than an opaque magic number.
         _document = TestSvg.Parse("""
             <svg>
               <image id="i-full" x="1" y="2" width="50" height="60"
-                     href="data:image/png;charset=utf-8;base64,iVBORw0KGgo="
+                     href="data:image/png;charset=utf-8;base64,aGVsbG8="
                      preserveAspectRatio="xMidYMid slice"
                      crossorigin="anonymous" decoding="async" fetchpriority="high"/>
               <image id="i-bare" width="10" height="10"/>
             </svg>
             """);
-        Console.WriteLine("Here");
         _full = (Image)_document.lookupSvgEntity("i-full")!;
-        Console.WriteLine("Here 2");
         _bare = (Image)_document.lookupSvgEntity("i-bare")!;
-        Console.WriteLine("Here 3");
     }
 
     public void Dispose() => _document.Dispose();
@@ -56,9 +54,12 @@ public class ImageTests : IDisposable
     }
 
     [Fact]
-    public void Href_ReturnsRawHref()
+    public void Href_ReturnsDecodedBytesForBase64DataUri()
     {
-        Assert.Equal("data:image/png;charset=utf-8;base64,iVBORw0KGgo=", _full.Href);
+        // The parser resolves the base64 payload eagerly (same principle as
+        // resolving currentColor) -- href holds the decoded bytes, not the
+        // original data URI or its base64 form.
+        Assert.Equal("hello", _full.Href);
     }
 
     [Fact]
@@ -120,5 +121,25 @@ public class ImageTests : IDisposable
     public void Href_ReturnsEmptyWhenAbsent()
     {
         Assert.Equal(string.Empty, _bare.Href);
+    }
+
+    [Fact]
+    public void Href_ReturnsPlainUrlUnchanged()
+    {
+        using var doc = TestSvg.Parse("""<svg><image id="i-url" width="10" height="10" href="picture.png"/></svg>""");
+        var image = (Image)doc.lookupSvgEntity("i-url")!;
+
+        Assert.Equal("picture.png", image.Href);
+    }
+
+    [Fact]
+    public void Href_ReturnsLiteralTextForNonBase64DataUri()
+    {
+        using var doc = TestSvg.Parse("""<svg><image id="i-literal" width="10" height="10" href="data:image/svg+xml;charset=utf-8,hello"/></svg>""");
+        var image = (Image)doc.lookupSvgEntity("i-literal")!;
+
+        Assert.Equal("hello", image.Href);
+        Assert.Equal("svg+xml", image.ImageType);
+        Assert.Equal("utf-8", image.CharacterEncoding);
     }
 }

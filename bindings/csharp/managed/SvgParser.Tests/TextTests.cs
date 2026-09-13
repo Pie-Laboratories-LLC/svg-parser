@@ -27,7 +27,6 @@ public class TextTests : IDisposable
 
     public TextTests()
     {
-        Console.WriteLine("Here 1");
         _document = TestSvg.Parse("""
             <svg>
               <text id="t-full" x="10 20 30" y="1 2 3" dx="1 2" dy="-1 -2" rotate="5 10 15"
@@ -35,11 +34,8 @@ public class TextTests : IDisposable
               <text id="t-bare">Plain</text>
             </svg>
             """);
-        Console.WriteLine("Here 2");
         _full = (Text)_document.lookupSvgEntity("t-full")!;
-        Console.WriteLine("Here 3");
         _bare = (Text)_document.lookupSvgEntity("t-bare")!;
-        Console.WriteLine("Here 4");
     }
 
     public void Dispose() => _document.Dispose();
