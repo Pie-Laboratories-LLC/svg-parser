@@ -111,13 +111,15 @@ jobs:
       - name: Pack NuGet package
         run: dotnet pack bindings/csharp/managed/SvgParser -c Release -o .
 
-      - name: NuGet.org login (OIDC - temp API key)
+      - name: NuGet login (OIDC - temp API key)
         uses: NuGet/login@v1
+        id: nuget-login
         with:
           user: kazaak
-
-      - name: Push to NuGet
-        run: dotnet nuget push *.nupkg --source https://api.nuget.org/v3/index.json
+      
+      - name: Push to NuGet.org
+        if: github.event_name == 'workflow_dispatch'
+        run: dotnet nuget push *.nupkg --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json
 
       - name: Push to GitHub Packages
         if: github.event_name == 'workflow_dispatch'
