@@ -114,7 +114,7 @@ jobs:
       - name: NuGet.org login (OIDC - temp API key)
         uses: NuGet/login@v1
         with:
-          user: matt.c.lemay@gmail.com
+          user: kazaak
 
       - name: Push to NuGet
         run: dotnet nuget push *.nupkg --source https://api.nuget.org/v3/index.json
