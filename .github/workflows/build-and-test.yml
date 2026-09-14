@@ -6,6 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write   # required so the workflow can request an OIDC token
+
 jobs:
   build-and-test:
     strategy:
@@ -107,9 +111,13 @@ jobs:
       - name: Pack NuGet package
         run: dotnet pack bindings/csharp/managed/SvgParser -c Release -o .
 
-      - name: Push to NuGet.org
-        if: github.event_name == 'workflow_dispatch'
-        run: dotnet nuget push *.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
+      - name: NuGet.org login (OIDC - temp API key)
+        uses: NuGet/login@v1
+        with:
+          user: matt.c.lemay@gmail.com
+
+      - name: Push to NuGet
+        run: dotnet nuget push *.nupkg --source https://api.nuget.org/v3/index.json
 
       - name: Push to GitHub Packages
         if: github.event_name == 'workflow_dispatch'
