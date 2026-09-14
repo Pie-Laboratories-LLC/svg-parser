@@ -171,9 +171,12 @@ depending on the value of the `SVGPARSER_WITH_XERCES` CMake flag (see
 Use the following commands to build the application.
 
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+cmake -S . -B build -DSVGPARSER_WITH_CSHARP_BINDINGS=ON -DCMAKE_BUILD_TYPE=Debug
 cmake --build build -j$(nproc)
 ```
+
+Omit the `-DSVGPARSER_WITH_CSHARP_BINDINGS=ON` flag if you do not wish to
+build the c# bindings.
 
 To build with Xerces support off, pass `-DSVGPARSER_WITH_XERCES=OFF`, to the
 configure command, like so:
@@ -332,11 +335,6 @@ These are short-term goals:
 * make the XML abstraction layer less Xerces-shaped.  The abstraction layer was
   built from Xerces rather than the other way around.  Implementing for SAX2
   would be a real challenge (see planned SAX2 support below).
-* Wire github actions to produce the nuget package containing c# bindings and
-  extend the build to include the mac runtime shared object.
-* support for `<text...>` elements.  I'm rendering fonts in 3D and this library
-  allows me to render OT-SVG fonts, in particular, emojis.  So adding support
-  for the `<text...>` element is essentially free.
 * support for `<pattern...>` elements.  This is another thing for which there is
   extensive support in the rendering layer.
 * Gradient inheritance
@@ -352,12 +350,11 @@ These are mid-term goals:
 * support for CSS styling.  Currently I grab any style text I find and append it
   into a string in the SvgDocument, and that's as much as I do.  I want to be
   sure to support CSS styling as commonly occurs in SVG documents.
-* github actions to build the nuget package, including binaries for Mac, Linux,
-  and Windows.
+* masking via `<mask...>`
 
 Longer term goals:
 
-* clipping and masking via `<clipPath..>` and `<mask...>`
+* clipping via `<clipPath..>`
 * markers via `<marker...>`.  This isn't so challenging to implement, there's
   just no immediate need for this.
 * a SAX2 implementation parser to complement the DOM.
