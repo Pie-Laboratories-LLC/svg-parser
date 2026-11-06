@@ -30,19 +30,33 @@ namespace Core {
         String(const String &copy) = default;
         String &operator=(const String &copy) = default;
         String(String &&move) = default;
-        virtual ~String() = default;
+        String &operator=(String &&move) = default;
+        ~String() = default;
 
         String(const char *cpszString): std::string(cpszString) {}
         String(std::string::const_iterator begin, std::string::const_iterator end): std::string(begin,end) {}
         String(const std::string &cstrString): std::string(cstrString) {}
+        String(std::string &&strString): std::string(std::move(strString)) {}
+
+        // Construction from raw bytes (pointer + length, may contain '\0'):
+        //   Core::String(std::string_view(pOctets, nLongueur))
+        // Deliberately no String(const char*, size_t): any leftover or habitual
+        // Core::String("fmt {}", n) would silently bind to it for every integer n.
+        explicit String(std::string_view svOctets): std::string(svOctets) {}
+
         String(int nValue);
+        explicit String(size_t nValue);
         String(double dValue);
         String(unsigned nValue);
         explicit String(bool bValue);
 
+        // Formatting is a named factory, not a constructor: a variadic
+        // format_string constructor competes with every other constructor in
+        // overload resolution (Core::String(pointer, length) matched it).
         template<typename... Args>
-        String(std::format_string<Args...> fmt, Args&&... args)
-            : String(std::format(fmt, std::forward<Args>(args)...)) {}
+        static String Format(std::format_string<Args...> fmt, Args&&... args) {
+            return String(std::format(fmt, std::forward<Args>(args)...));
+        }
 
         // NOTE: claude says it's appropriate to std::move() inPlace here, but g++ insists it prevents copy elision.
         //  prolly never use another compiler, but worth noting.
@@ -86,7 +100,7 @@ namespace Core {
             for (auto elem : elems) {
                 if(!first) strResult += delimiter;
                 first = false;
-                strResult += elem;
+                strResult += std::format("{}",elem);
             }
             return strResult;
         }
@@ -111,6 +125,8 @@ namespace Core {
         std::vector<Core::String> split(char delimiter,
                                         bool bSkipEmpty = true,
                                         std::optional<size_t> maxSplits = std::nullopt) const;
+
+        String repeat(unsigned nCount);
 
         static bool IsEmpty(const String &strString) {
             return strString.size() == 0;

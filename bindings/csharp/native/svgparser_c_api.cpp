@@ -22,7 +22,7 @@ XERCES_CPP_NAMESPACE_USE
 int svgparser_init(void) {
     try {
         XMLPlatformUtils::Initialize();
-        Core::Logger::Instance(std::unordered_set<const char *,CStrHash,CStrEq> { }, Core::Error);
+        Core::Logger::Instance(std::unordered_set<const char *,CStrHash,CStrEq> { }, Core::LogLevel::Error);
         return 1;
     } catch (...) {
         return 0;

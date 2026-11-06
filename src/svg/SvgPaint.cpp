@@ -31,7 +31,8 @@ namespace Draw2d::Svg {
     SvgPaint::SvgPaint(const SvgPaint &copy):
         m_enumSvgColourType(copy.m_enumSvgColourType),
         m_strGradientId(copy.m_strGradientId),
-        m_colour(copy.m_colour)
+        m_colour(copy.m_colour),
+        m_fallback(copy.m_fallback)
     {
     }
 

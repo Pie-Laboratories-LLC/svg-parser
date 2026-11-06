@@ -17,6 +17,7 @@
 #define CATCH_CONFIG_MAIN 
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_approx.hpp>
 
 #include "svg/SvgParser.hpp"
 
@@ -31,6 +32,21 @@
 #endif
 #ifndef DRAW2D_SVG_IMAGE_DOT_HPP
     #include "svg/Image.hpp"
+#endif
+#ifndef DRAW2D_SVG_USE_DOT_HPP
+    #include "svg/Use.hpp"
+#endif
+#ifndef DRAW2D_SVG_POLYGON_DOT_HPP
+    #include "svg/Polygon.hpp"
+#endif
+#ifndef DRAW2D_SVG_MASK_DOT_HPP
+    #include "svg/Mask.hpp"
+#endif
+#ifndef DRAW2D_SVG_CLIPPATH_DOT_HPP
+    #include "svg/ClipPath.hpp"
+#endif
+#ifndef DRAW2D_SVG_POLYLINE_DOT_HPP
+    #include "svg/Polyline.hpp"
 #endif
 
 TEST_CASE("1a. Single Line Segment", "[path][svg]") {
@@ -369,6 +385,74 @@ TEST_CASE("4l. Unrecognized color string (should throw)", "[colour][svg][throws]
     REQUIRE_THROWS_AS ( svgParser.parse(svg4l), Draw2d::Svg::SvgException );
 }
 
+// the fill colour of a lone path, as stored (B, G, R, A or H, S, L, A)
+static Draw2d::Svg::SvgColour FillOf(const char *pszFill)
+{
+    Draw2d::Svg::SvgParser svgParser {};
+    Core::String strSvg = std::format(R"xxx(<svg><path id="p" d="M0,0 L1,1 Z" fill="{}"/></svg>)xxx", pszFill);
+    auto svgDocument = svgParser.parse(strSvg);
+    return svgDocument->lookupSvgEntity("p")->getFillColour().getColour();
+}
+
+static std::array<uint8_t,4> BgraOf(const char *pszFill)
+{
+    return FillOf(pszFill).getBgrA().value();
+}
+
+TEST_CASE("4m. Hex colours are stored as B, G, R, A", "[colour][svg]") {
+    REQUIRE( FillOf("#a1b2c3").getSvgColourType() == Draw2d::Svg::SvgColourType::Bgr );
+    REQUIRE( BgraOf("#a1b2c3") == std::array<uint8_t,4> { 0xc3, 0xb2, 0xa1, 0xff } );
+    REQUIRE( FillOf("#a1b2c3d4").getSvgColourType() == Draw2d::Svg::SvgColourType::BgrA );
+    REQUIRE( BgraOf("#a1b2c3d4") == std::array<uint8_t,4> { 0xc3, 0xb2, 0xa1, 0xd4 } );
+}
+
+TEST_CASE("4n. Short hex colours use one digit per channel", "[colour][svg]") {
+    REQUIRE( BgraOf("#abc") == std::array<uint8_t,4> { 0xcc, 0xbb, 0xaa, 0xff } );
+    REQUIRE( FillOf("#abcd").getSvgColourType() == Draw2d::Svg::SvgColourType::BgrA );
+    REQUIRE( BgraOf("#abcd") == std::array<uint8_t,4> { 0xcc, 0xbb, 0xaa, 0xdd } );
+}
+
+TEST_CASE("4o. Named, hex and rgb() red all agree", "[colour][svg]") {
+    const std::array<uint8_t,4> red { 0x00, 0x00, 0xff, 0xff };
+    REQUIRE( BgraOf("red") == red );
+    REQUIRE( BgraOf("#ff0000") == red );
+    REQUIRE( BgraOf("#f00") == red );
+    REQUIRE( BgraOf("rgb(255,0,0)") == red );
+    REQUIRE( BgraOf("rgb(100%,0%,0%)") == red );
+}
+
+TEST_CASE("4p. rgba() alpha and out-of-range channels", "[colour][svg]") {
+    REQUIRE( FillOf("rgba(255,0,0,0.5)").getSvgColourType() == Draw2d::Svg::SvgColourType::BgrA );
+    REQUIRE( BgraOf("rgba(255,0,0,0.5)") == std::array<uint8_t,4> { 0x00, 0x00, 0xff, 0x80 } );
+    REQUIRE( BgraOf("rgba(0,0,255,25%)") == std::array<uint8_t,4> { 0xff, 0x00, 0x00, 0x40 } );
+    REQUIRE( BgraOf("rgb(50%,0%,0%)") == std::array<uint8_t,4> { 0x00, 0x00, 0x80, 0xff } );
+    // clamped as in CSS
+    REQUIRE( BgraOf("rgb(300,-5,0)") == std::array<uint8_t,4> { 0x00, 0x00, 0xff, 0xff } );
+}
+
+TEST_CASE("4q. hsl() is stored as degrees and 0-1 fractions", "[colour][svg]") {
+    using Catch::Approx;
+    auto hsl = FillOf("hsl(120, 100%, 50%)");
+    REQUIRE( hsl.getSvgColourType() == Draw2d::Svg::SvgColourType::Hsl );
+    auto pHsla = hsl.getHslA().value();
+    REQUIRE( pHsla[0] == Approx(120.0f) );
+    REQUIRE( pHsla[1] == Approx(1.0f) );
+    REQUIRE( pHsla[2] == Approx(0.5f) );
+    REQUIRE( pHsla[3] == Approx(1.0f) );
+
+    auto hsla = FillOf("hsla(0.5turn, 50%, 25%, 0.25)");
+    REQUIRE( hsla.getSvgColourType() == Draw2d::Svg::SvgColourType::HslA );
+    pHsla = hsla.getHslA().value();
+    REQUIRE( pHsla[0] == Approx(180.0f) );
+    REQUIRE( pHsla[1] == Approx(0.5f) );
+    REQUIRE( pHsla[2] == Approx(0.25f) );
+    REQUIRE( pHsla[3] == Approx(0.25f) );
+
+    REQUIRE( FillOf("hsl(200grad, 100%, 50%)").getHslA().value()[0] == Approx(180.0f) );
+    REQUIRE( FillOf("hsl(3.14159265rad, 100%, 50%)").getHslA().value()[0] == Approx(180.0f) );
+    REQUIRE( FillOf("hsl(90deg, 100%, 50%)").getHslA().value()[0] == Approx(90.0f) );
+}
+
 TEST_CASE("5a. Minimal valid", "[gradient][svg]") {
     Draw2d::Svg::SvgParser svgParser {};
     auto svg5a = R"xxx(
@@ -575,6 +659,15 @@ TEST_CASE("7p. Malformed transform - unclosed paren (should throw)", "[transform
     Draw2d::Svg::SvgParser svgParser {};
     auto svg7p = R"xxx(<svg><g id="g7p" transform="translate(10,20"><path id="p7p" d="M0,0 L1,1 Z"/></g></svg>)xxx";
     REQUIRE_THROWS_AS ( svgParser.parse(svg7p), Draw2d::Svg::SvgException );
+}
+
+TEST_CASE("7q. Nested transforms: each entity keeps only its own transform", "[transform][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg7q = R"xxx(<svg><g id="g7q" transform="translate(10,0)"><path id="p7q" d="M0,0 L1,1 Z" transform="translate(5,0)"/></g></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg7q);
+    // the renderer composes matrices on the way down; an accumulated matrix here would apply translate(10,0) twice
+    REQUIRE( svgDocument->lookupSvgEntity("g7q")->getMatrix().value() == std::array<float,6> { 1, 0, 0, 1, 10, 0 } );
+    REQUIRE( svgDocument->lookupSvgEntity("p7q")->getMatrix().value() == std::array<float,6> { 1, 0, 0, 1, 5, 0 } );
 }
 
 TEST_CASE("8a. Unrecognized top-level element (should throw)", "[structural][throws][svg]") {
@@ -791,8 +884,32 @@ TEST_CASE("9i. use -> defs group -> use -> back to the enclosing group", "[use][
     REQUIRE_THROWS_AS ( svgParser.parse(svg9i), Draw2d::Svg::SvgException );
 }
 // ============================================================
-// 10. <text>
+// 10. <text> -- contenu, blancs, attributs de police
 // ============================================================
+
+namespace {
+    using Draw2d::Svg::Text;
+    using Draw2d::Svg::TSpan;
+    using Draw2d::Svg::RawText;
+
+    // le n-ième morceau, s'il est du texte brut
+    const Core::String &Brut(const RawText &rawText, size_t n) {
+        const auto &parts = rawText.getTexts();
+        REQUIRE(n < parts.size());
+        REQUIRE(std::holds_alternative<Core::String>(parts[n]));
+        return std::get<Core::String>(parts[n]);
+    }
+
+    // le n-ième morceau, s'il est un <tspan>
+    const TSpan &Sous(const RawText &rawText, size_t n) {
+        const auto &parts = rawText.getTexts();
+        REQUIRE(n < parts.size());
+        REQUIRE(std::holds_alternative<std::unique_ptr<TSpan>>(parts[n]));
+        const auto &tspan = std::get<std::unique_ptr<TSpan>>(parts[n]);
+        REQUIRE(tspan != nullptr);
+        return *tspan;
+    }
+}
 
 TEST_CASE("10a. Basic text node with content", "[text][svg]") {
     Draw2d::Svg::SvgParser svgParser {};
@@ -893,6 +1010,261 @@ TEST_CASE("10h. text with malformed numeric list throws", "[text][throws][svg]")
     auto svg10h = R"xxx(<svg><text id="t10h" x="10 notanumber 30">abc</text></svg>)xxx";
 
     REQUIRE_THROWS_AS( svgParser.parse(svg10h), Draw2d::Svg::SvgException );
+}
+
+TEST_CASE("10i. text content is captured", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10i = R"xxx(<svg><text id="t10i" x="10" y="20">Hello</text></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10i);
+
+    const auto *text = dynamic_cast<const Text *>(svgDocument.get()->lookupSvgEntity("t10i"));
+    REQUIRE(text != nullptr);
+
+    REQUIRE(text->getRawText().getTexts().size() == 1);
+    REQUIRE(Brut(text->getRawText(), 0) == "Hello");
+}
+
+TEST_CASE("10j. mixed content keeps document order", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10j = R"xxx(<svg><text id="t10j">a<tspan>b</tspan>c</text></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10j);
+
+    const auto *text = dynamic_cast<const Text *>(svgDocument.get()->lookupSvgEntity("t10j"));
+    REQUIRE(text != nullptr);
+
+    const RawText &contenu = text->getRawText();
+    REQUIRE(contenu.getTexts().size() == 3);
+    REQUIRE(Brut(contenu, 0) == "a");
+    REQUIRE(Brut(Sous(contenu, 1).getText(), 0) == "b");
+    REQUIRE(Brut(contenu, 2) == "c");
+}
+
+TEST_CASE("10k. nested tspans nest their content", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10k = R"xxx(<svg><text id="t10k"><tspan>x<tspan>y</tspan></tspan></text></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10k);
+
+    const auto *text = dynamic_cast<const Text *>(svgDocument.get()->lookupSvgEntity("t10k"));
+    REQUIRE(text != nullptr);
+
+    const TSpan &extérieur = Sous(text->getRawText(), 0);
+    REQUIRE(extérieur.getText().getTexts().size() == 2);
+    REQUIRE(Brut(extérieur.getText(), 0) == "x");
+    const TSpan &intérieur = Sous(extérieur.getText(), 1);
+    REQUIRE(Brut(intérieur.getText(), 0) == "y");
+}
+
+TEST_CASE("10l. entities arrive decoded", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10l = R"xxx(<svg><text id="t10l">A &amp; B &lt; C &#x2205;</text></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10l);
+
+    const auto *text = dynamic_cast<const Text *>(svgDocument.get()->lookupSvgEntity("t10l"));
+    REQUIRE(text != nullptr);
+
+    // U+2205 ∅ en UTF-8: E2 88 85
+    REQUIRE(Draw2d::Svg::concatenateText(text->getRawText()) == "A & B < C \xE2\x88\x85");
+}
+
+TEST_CASE("10m. CDATA is text, comments are not", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10m = R"xxx(<svg><text id="t10m">a<!-- note -->b<![CDATA[<c>]]></text></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10m);
+
+    const auto *text = dynamic_cast<const Text *>(svgDocument.get()->lookupSvgEntity("t10m"));
+    REQUIRE(text != nullptr);
+
+    // le nombre de morceaux dépend de l'analyseur XML; le texte, non
+    REQUIRE(Draw2d::Svg::concatenateText(text->getRawText()) == "ab<c>");
+}
+
+TEST_CASE("10n. raw parts keep their whitespace", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10n = R"xxx(<svg><text id="t10n">  a  b  </text></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10n);
+
+    const auto *text = dynamic_cast<const Text *>(svgDocument.get()->lookupSvgEntity("t10n"));
+    REQUIRE(text != nullptr);
+
+    REQUIRE(Brut(text->getRawText(), 0) == "  a  b  ");
+}
+
+TEST_CASE("10o. concatenateText collapses whitespace", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10o = "<svg><text id=\"t10o\">\n   foo \t\t bar\n  </text></svg>";
+    auto svgDocument = svgParser.parse(svg10o);
+
+    const auto *text = dynamic_cast<const Text *>(svgDocument.get()->lookupSvgEntity("t10o"));
+    REQUIRE(text != nullptr);
+
+    REQUIRE(Draw2d::Svg::concatenateText(text->getRawText()) == "foo bar");
+}
+
+TEST_CASE("10p. whitespace collapses across a tspan boundary", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10p = R"xxx(<svg><text id="t10p">foo <tspan> bar</tspan> </text></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10p);
+
+    const auto *text = dynamic_cast<const Text *>(svgDocument.get()->lookupSvgEntity("t10p"));
+    REQUIRE(text != nullptr);
+
+    REQUIRE(Draw2d::Svg::concatenateText(text->getRawText()) == "foo bar");
+}
+
+TEST_CASE("10q. multibyte UTF-8 passes through", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    // « çà ∅ » en UTF-8
+    auto svg10q = "<svg><text id=\"t10q\">\xC3\xA7\xC3\xA0  \xE2\x88\x85</text></svg>";
+    auto svgDocument = svgParser.parse(svg10q);
+
+    const auto *text = dynamic_cast<const Text *>(svgDocument.get()->lookupSvgEntity("t10q"));
+    REQUIRE(text != nullptr);
+
+    REQUIRE(Draw2d::Svg::concatenateText(text->getRawText()) == "\xC3\xA7\xC3\xA0 \xE2\x88\x85");
+}
+
+TEST_CASE("10r. empty and blank text give an empty string", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10r = "<svg><text id=\"t10r1\"></text><text id=\"t10r2\"> \n\t </text></svg>";
+    auto svgDocument = svgParser.parse(svg10r);
+
+    const auto *vide = dynamic_cast<const Text *>(svgDocument.get()->lookupSvgEntity("t10r1"));
+    const auto *blanc = dynamic_cast<const Text *>(svgDocument.get()->lookupSvgEntity("t10r2"));
+    REQUIRE(vide != nullptr);
+    REQUIRE(blanc != nullptr);
+
+    REQUIRE(Draw2d::Svg::concatenateText(vide->getRawText()).empty());
+    REQUIRE(Draw2d::Svg::concatenateText(blanc->getRawText()).empty());
+}
+
+TEST_CASE("10s. font-size accepts plain numbers and px", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10s = R"xxx(<svg>
+        <text id="a" font-size="14">a</text>
+        <text id="b" font-size="14.0">b</text>
+        <text id="c" font-size="14px">c</text>
+        <text id="d" font-size=" 14 ">d</text>
+    </svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10s);
+
+    for (const char *id : { "a", "b", "c", "d" }) {
+        INFO("text " << id);
+        const auto *text = dynamic_cast<const Text *>(svgDocument.get()->lookupSvgEntity(id));
+        REQUIRE(text != nullptr);
+        REQUIRE(text->getFontSize().has_value());
+        REQUIRE(text->getFontSize().value() == 14.0f);
+    }
+}
+
+TEST_CASE("10t. font-size left unset when unreadable or absent", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10t = R"xxx(<svg>
+        <text id="em" font-size="1em">a</text>
+        <text id="mot" font-size="abc">b</text>
+        <text id="négatif" font-size="-3">c</text>
+        <text id="absent">d</text>
+    </svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10t);
+
+    for (const char *id : { "mot", "négatif", "absent" }) {
+        INFO("text " << id);
+        const auto *text = dynamic_cast<const Text *>(svgDocument.get()->lookupSvgEntity(id));
+        REQUIRE(text != nullptr);
+        REQUIRE_FALSE(text->getFontSize().has_value());
+    }
+
+    // em: relatif à la taille du parent -- sans héritage, le défaut, 16
+    const auto *em = dynamic_cast<const Text *>(svgDocument.get()->lookupSvgEntity("em"));
+    REQUIRE(em != nullptr);
+    REQUIRE(em->getFontSize().has_value());
+    REQUIRE(em->getFontSize().value() == 1.0f);
+}
+
+TEST_CASE("10u. text-anchor values", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10u = R"xxx(<svg>
+        <text id="s" text-anchor="start">a</text>
+        <text id="m" text-anchor="middle">b</text>
+        <text id="e" text-anchor="end">c</text>
+        <text id="x" text-anchor="inherit">d</text>
+        <text id="n">e</text>
+    </svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10u);
+    auto ancre = [&](const char *id) {
+        const auto *text = dynamic_cast<const Text *>(svgDocument.get()->lookupSvgEntity(id));
+        REQUIRE(text != nullptr);
+        return text->getTextAnchor();
+    };
+
+    REQUIRE(ancre("s") == Draw2d::Svg::TextAnchor::Start);
+    REQUIRE(ancre("m") == Draw2d::Svg::TextAnchor::Middle);
+    REQUIRE(ancre("e") == Draw2d::Svg::TextAnchor::End);
+    REQUIRE_FALSE(ancre("x").has_value());
+    REQUIRE_FALSE(ancre("n").has_value());
+}
+
+TEST_CASE("10v. font-style values", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10v = R"xxx(<svg>
+        <text id="n" font-style="normal">a</text>
+        <text id="i" font-style="italic">b</text>
+        <text id="o" font-style="oblique">c</text>
+        <text id="x" font-style="slanty">d</text>
+    </svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10v);
+    auto style = [&](const char *id) {
+        const auto *text = dynamic_cast<const Text *>(svgDocument.get()->lookupSvgEntity(id));
+        REQUIRE(text != nullptr);
+        return text->getFontStyle();
+    };
+
+    REQUIRE(style("n") == Draw2d::Svg::FontStyle::Normal);
+    REQUIRE(style("i") == Draw2d::Svg::FontStyle::Italic);
+    REQUIRE(style("o") == Draw2d::Svg::FontStyle::Oblique);
+    REQUIRE_FALSE(style("x").has_value());
+}
+
+TEST_CASE("10w. font-family is kept as written", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10w = R"xxx(<svg><text id="t10w" font-family="sans-serif">a</text></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10w);
+
+    const auto *text = dynamic_cast<const Text *>(svgDocument.get()->lookupSvgEntity("t10w"));
+    REQUIRE(text != nullptr);
+    REQUIRE(text->getFontFamily().has_value());
+    REQUIRE(text->getFontFamily().value() == "sans-serif");
+}
+
+TEST_CASE("10x. fill is parsed on text", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10x = R"xxx(<svg><text id="t10x" fill="#1a1a1a">a</text></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10x);
+
+    const auto *text = dynamic_cast<const Text *>(svgDocument.get()->lookupSvgEntity("t10x"));
+    REQUIRE(text != nullptr);
+    REQUIRE(text->getFillColour().getSvgColourType() != Draw2d::Svg::SvgColourType::None);   // À ADAPTER
+}
+
+TEST_CASE("10y. tspan position lists are parsed", "[text][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svg10y = R"xxx(<svg><text id="t10y"><tspan x="5" dx="1 2" rotate="15">ab</tspan></text></svg>)xxx";
+    auto svgDocument = svgParser.parse(svg10y);
+
+    const auto *text = dynamic_cast<const Text *>(svgDocument.get()->lookupSvgEntity("t10y"));
+    REQUIRE(text != nullptr);
+
+    const TSpan &tspan = Sous(text->getRawText(), 0);
+    REQUIRE(tspan.getX() == std::vector<float>{ 5.0f });
+    REQUIRE(tspan.getDx() == std::vector<float>{ 1.0f, 2.0f });
+    REQUIRE(tspan.getRotate() == std::vector<float>{ 15.0f });
+}
+
+TEST_CASE("10z. text nodes are move-only", "[text][svg]") {
+    STATIC_REQUIRE_FALSE(std::is_copy_constructible_v<RawText>);
+    STATIC_REQUIRE_FALSE(std::is_copy_constructible_v<TSpan>);
+    STATIC_REQUIRE_FALSE(std::is_copy_constructible_v<Text>);
+    STATIC_REQUIRE(std::is_nothrow_move_constructible_v<RawText>);
+    STATIC_REQUIRE(std::is_nothrow_move_constructible_v<TSpan>);
 }
 
 // ============================================================
@@ -1002,4 +1374,285 @@ TEST_CASE("11h. image with literal-text (non-base64) data URI", "[image][svg]") 
     REQUIRE(image->getHrefKind() == Draw2d::Svg::HrefKind::LiteralText);
     REQUIRE(image->getImageType() == "svg+xml");
     REQUIRE(image->getCharacterEncoding() == "utf-8");
+}
+
+// the entity with this id, from a parsed document
+static const Draw2d::Svg::SvgEntity *EntityIn(const std::unique_ptr<Draw2d::Svg::SvgDocument> &svgDocument, const char *pszId)
+{
+    const Draw2d::Svg::SvgEntity *cpEntity = svgDocument->lookupSvgEntity(pszId);
+    REQUIRE( cpEntity != nullptr );
+    return cpEntity;
+}
+
+static std::array<uint8_t,4> FillBgraOf(const Draw2d::Svg::SvgEntity *cpEntity)
+{
+    return cpEntity->getFillColour().getColour().getBgrA().value();
+}
+
+TEST_CASE("12a. A class rule sets the fill", "[css][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svgDocument = svgParser.parse(R"xxx(<svg>
+        <defs><style>.cls-1 { fill: #ff0000; } .cls-2 { fill: none; }</style></defs>
+        <path id="red" class="cls-1" d="M0,0 L1,1 Z"/>
+        <path id="none" class="cls-2" d="M0,0 L1,1 Z"/>
+    </svg>)xxx");
+    REQUIRE( FillBgraOf(EntityIn(svgDocument, "red")) == std::array<uint8_t,4> { 0x00, 0x00, 0xff, 0xff } );
+    REQUIRE( EntityIn(svgDocument, "none")->getFillColour().getSvgColourType() == Draw2d::Svg::SvgColourType::None );
+}
+
+TEST_CASE("12b. A stylesheet after the content still applies", "[css][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svgDocument = svgParser.parse(R"xxx(<svg>
+        <path id="p" class="late" d="M0,0 L1,1 Z"/>
+        <style>.late { fill: #0000ff; }</style>
+    </svg>)xxx");
+    REQUIRE( FillBgraOf(EntityIn(svgDocument, "p")) == std::array<uint8_t,4> { 0xff, 0x00, 0x00, 0xff } );
+}
+
+TEST_CASE("12c. Cascade: attribute < stylesheet < style attribute", "[css][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svgDocument = svgParser.parse(R"xxx(<svg>
+        <style>.c { fill: #00ff00; stroke: #00ff00; }</style>
+        <path id="sheet" class="c" fill="#ff0000" d="M0,0 L1,1 Z"/>
+        <path id="inline" class="c" fill="#ff0000" style="fill: #0000ff" d="M0,0 L1,1 Z"/>
+    </svg>)xxx");
+    REQUIRE( FillBgraOf(EntityIn(svgDocument, "sheet")) == std::array<uint8_t,4> { 0x00, 0xff, 0x00, 0xff } );
+    REQUIRE( FillBgraOf(EntityIn(svgDocument, "inline")) == std::array<uint8_t,4> { 0xff, 0x00, 0x00, 0xff } );
+    REQUIRE( EntityIn(svgDocument, "inline")->getStrokeColour().getColour().getBgrA().value() == std::array<uint8_t,4> { 0x00, 0xff, 0x00, 0xff } );
+}
+
+TEST_CASE("12d. Fill and stroke inherit from groups, CSS or attribute", "[css][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svgDocument = svgParser.parse(R"xxx(<svg>
+        <style>.blue { fill: #0000ff; }</style>
+        <g fill="#ff0000" stroke-width="3"><path id="fromAttribute" d="M0,0 L1,1 Z"/></g>
+        <g class="blue"><g><path id="fromCss" d="M0,0 L1,1 Z"/></g></g>
+    </svg>)xxx");
+    REQUIRE( FillBgraOf(EntityIn(svgDocument, "fromAttribute")) == std::array<uint8_t,4> { 0x00, 0x00, 0xff, 0xff } );
+    REQUIRE( EntityIn(svgDocument, "fromAttribute")->getStrokeWidth() == 3.0f );
+    REQUIRE( FillBgraOf(EntityIn(svgDocument, "fromCss")) == std::array<uint8_t,4> { 0xff, 0x00, 0x00, 0xff } );
+}
+
+TEST_CASE("12e. Initial values: black fill, no stroke", "[css][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svgDocument = svgParser.parse(R"xxx(<svg><path id="p" d="M0,0 L1,1 Z"/></svg>)xxx");
+    REQUIRE( FillBgraOf(EntityIn(svgDocument, "p")) == std::array<uint8_t,4> { 0x00, 0x00, 0x00, 0xff } );
+    REQUIRE( EntityIn(svgDocument, "p")->getStrokeColour().getSvgColourType() == Draw2d::Svg::SvgColourType::None );
+}
+
+TEST_CASE("12f. use passes its fill on to what it references", "[css][use][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svgDocument = svgParser.parse(R"xxx(<svg>
+        <defs><path id="shape" d="M0,0 L1,1 Z"/></defs>
+        <use id="u" xlink:href="#shape" fill="#ff0000"/>
+    </svg>)xxx");
+    const auto *cpUse = dynamic_cast<const Draw2d::Svg::Use *>(EntityIn(svgDocument, "u"));
+    REQUIRE( cpUse != nullptr );
+    auto generator = cpUse->enumerateChildren();
+    const Draw2d::Svg::SvgEntity *cpInstance = *generator.begin();
+    REQUIRE( FillBgraOf(cpInstance) == std::array<uint8_t,4> { 0x00, 0x00, 0xff, 0xff } );
+}
+
+TEST_CASE("12g. Lengths and opacities from CSS take units and percentages", "[css][svg]") {
+    using Catch::Approx;
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svgDocument = svgParser.parse(R"xxx(<svg>
+        <style>
+            .px { stroke-width: 2.83464574813843px; }
+            .in { stroke-width: 1in; stroke-dasharray: 4,3 2; fill-opacity: 50%; }
+            .half { opacity: 50%; }
+        </style>
+        <path id="px" class="px" d="M0,0 L1,1 Z"/>
+        <path id="in" class="in" d="M0,0 L1,1 Z"/>
+        <g id="half" class="half"><path d="M0,0 L1,1 Z"/></g>
+    </svg>)xxx");
+    REQUIRE( EntityIn(svgDocument, "px")->getStrokeWidth() == Approx(2.83464574813843f) );
+    REQUIRE( EntityIn(svgDocument, "in")->getStrokeWidth() == Approx(96.0f) );
+    REQUIRE( EntityIn(svgDocument, "in")->getDashArray() == std::vector<float> { 4.0f, 3.0f, 2.0f } );
+    REQUIRE( EntityIn(svgDocument, "in")->getFillOpacity() == Approx(0.5f) );
+    const auto *cpGroup = dynamic_cast<const Draw2d::Svg::Group *>(EntityIn(svgDocument, "half"));
+    REQUIRE( cpGroup != nullptr );
+    REQUIRE( cpGroup->getOpacity() == Approx(0.5f) );
+}
+
+TEST_CASE("13a. A gradient inherits stops and transform through href", "[gradient][svg]") {
+    using Catch::Approx;
+    Draw2d::Svg::SvgParser svgParser {};
+    // shaped like the logo's radial-gradient-2: own geometry, stops and transform from the referenced one
+    auto svgDocument = svgParser.parse(R"xxx(<svg><defs>
+        <radialGradient id="base" cx="10" cy="10" r="5" gradientTransform="translate(-3 0)" gradientUnits="userSpaceOnUse" spreadMethod="reflect">
+            <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#000000"/>
+        </radialGradient>
+        <radialGradient id="derived" cx="20" cy="30" r="4" xlink:href="#base"/>
+    </defs></svg>)xxx");
+    const auto *cpDerived = svgDocument->lookupGradient("derived");
+    REQUIRE( cpDerived->stops.size() == 2 );
+    REQUIRE( cpDerived->transform.has_value() );
+    REQUIRE( cpDerived->transform.value() == std::array<float,6> { 1, 0, 0, 1, -3, 0 } );
+    REQUIRE( cpDerived->enumSpreadMethod == Draw2d::SpreadMethod::Reflect );
+    // its own geometry stays; the focal point defaults to its own centre
+    REQUIRE( cpDerived->geometry[0] == Approx(20.0f) );
+    REQUIRE( cpDerived->geometry[2] == Approx(4.0f) );
+    REQUIRE( cpDerived->geometry[3] == Approx(20.0f) );
+    REQUIRE( cpDerived->geometry[4] == Approx(30.0f) );
+}
+
+TEST_CASE("13b. Missing geometry is inherited, even from a gradient defined later", "[gradient][svg]") {
+    using Catch::Approx;
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svgDocument = svgParser.parse(R"xxx(<svg><defs>
+        <linearGradient id="derived" x2="50" xlink:href="#base"><stop offset="0" stop-color="red"/></linearGradient>
+        <linearGradient id="base" x1="1" y1="2" x2="3" y2="4"><stop offset="0" stop-color="blue"/><stop offset="1" stop-color="red"/></linearGradient>
+    </defs></svg>)xxx");
+    const auto *cpDerived = svgDocument->lookupGradient("derived");
+    REQUIRE( cpDerived->geometry[0] == Approx(1.0f) );
+    REQUIRE( cpDerived->geometry[1] == Approx(2.0f) );
+    REQUIRE( cpDerived->geometry[2] == Approx(50.0f) );
+    REQUIRE( cpDerived->geometry[3] == Approx(4.0f) );
+    // it has a stop of its own, so it keeps it
+    REQUIRE( cpDerived->stops.size() == 1 );
+}
+
+TEST_CASE("13c. No gradientTransform means no transform; percentages are fractions", "[gradient][svg]") {
+    using Catch::Approx;
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svgDocument = svgParser.parse(R"xxx(<svg><defs>
+        <linearGradient id="g" x1="0%" y1="0" x2="100%" y2="0"><stop offset="25%" stop-color="red"/><stop offset="1" stop-color="blue"/></linearGradient>
+    </defs></svg>)xxx");
+    const auto *cpGradient = svgDocument->lookupGradient("g");
+    REQUIRE( !cpGradient->transform.has_value() );
+    REQUIRE( cpGradient->geometry[2] == Approx(1.0f) );
+    REQUIRE( cpGradient->stops[0].getOffset() == Approx(0.25f) );
+}
+
+TEST_CASE("13d. A reference cycle between gradients doesn't hang", "[gradient][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svgDocument = svgParser.parse(R"xxx(<svg><defs>
+        <linearGradient id="a" x1="0" y1="0" x2="1" y2="0" xlink:href="#b"/>
+        <linearGradient id="b" x1="0" y1="0" x2="1" y2="0" xlink:href="#a"/>
+    </defs></svg>)xxx");
+    REQUIRE( svgDocument->lookupGradient("a")->stops.empty() );
+}
+
+TEST_CASE("14a. polygon becomes a closed path through its points", "[polygon][svg]") {
+    using Draw2d::Svg::PathMove;
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svgDocument = svgParser.parse(R"xxx(<svg><polygon id="p" points="0,0 10,0 10,10"/></svg>)xxx");
+    const auto *cpPolygon = dynamic_cast<const Draw2d::Svg::Polygon *>(EntityIn(svgDocument, "p"));
+    REQUIRE( cpPolygon != nullptr );
+    REQUIRE( std::string(cpPolygon->getType()) == "Polygon" );
+    REQUIRE( cpPolygon->getPathMoves() == std::vector<PathMove> { PathMove::MoveTo, PathMove::LineTo, PathMove::LineTo, PathMove::ClosePath } );
+    REQUIRE( cpPolygon->getPoints() == std::vector<float> { 0, 0, 10, 0, 10, 10 } );
+}
+
+TEST_CASE("14b. polyline stays open", "[polygon][svg]") {
+    using Draw2d::Svg::PathMove;
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svgDocument = svgParser.parse(R"xxx(<svg><polyline id="p" points="0 0 10 0 10 10"/></svg>)xxx");
+    const auto *cpPolyline = dynamic_cast<const Draw2d::Svg::Polyline *>(EntityIn(svgDocument, "p"));
+    REQUIRE( cpPolyline != nullptr );
+    REQUIRE( cpPolyline->getPathMoves() == std::vector<PathMove> { PathMove::MoveTo, PathMove::LineTo, PathMove::LineTo } );
+}
+
+TEST_CASE("14c. points take path data's number syntax", "[polygon][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    // as Illustrator writes them: no separator before a minus sign or a second decimal point
+    auto svgDocument = svgParser.parse(R"xxx(<svg><polygon id="p" points="1.5.5 10-5 -2e1,3"/></svg>)xxx");
+    REQUIRE( dynamic_cast<const Draw2d::Svg::Path *>(EntityIn(svgDocument, "p"))->getPoints() == std::vector<float> { 1.5f, 0.5f, 10, -5, -20, 3 } );
+}
+
+TEST_CASE("14d. bad points: odd coordinate dropped, drawn up to junk, too few draws nothing", "[polygon][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svgDocument = svgParser.parse(R"xxx(<svg>
+        <polygon id="odd" points="0,0 10,0 10"/>
+        <polygon id="junk" points="0,0 10,0 10,10 x 20,20"/>
+        <polygon id="one" points="5,5"/>
+        <polygon id="none"/>
+    </svg>)xxx");
+    auto pointsOf = [&](const char *pszId) { return dynamic_cast<const Draw2d::Svg::Path *>(EntityIn(svgDocument, pszId))->getPoints(); };
+    REQUIRE( pointsOf("odd") == std::vector<float> { 0, 0, 10, 0 } );
+    REQUIRE( pointsOf("junk") == std::vector<float> { 0, 0, 10, 0, 10, 10 } );
+    REQUIRE( pointsOf("one").empty() );
+    REQUIRE( dynamic_cast<const Draw2d::Svg::Path *>(EntityIn(svgDocument, "one"))->getPathMoves().empty() );
+    REQUIRE( pointsOf("none").empty() );
+}
+
+TEST_CASE("14e. polygon takes its fill from CSS", "[polygon][css][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svgDocument = svgParser.parse(R"xxx(<svg><style>.cls-9 { fill: #4f3e33; }</style><polygon id="p" class="cls-9" points="0,0 1,0 1,1"/></svg>)xxx");
+    REQUIRE( FillBgraOf(EntityIn(svgDocument, "p")) == std::array<uint8_t,4> { 0x33, 0x3e, 0x4f, 0xff } );
+}
+
+TEST_CASE("15a. mask is parsed with its region and units", "[mask][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svgDocument = svgParser.parse(R"xxx(<svg><defs>
+        <mask id="m" x="1" y="2" width="3" height="4" maskUnits="userSpaceOnUse"><rect id="inside" width="1" height="1" fill="#ffffff"/></mask>
+        <mask id="defaults"><rect width="1" height="1"/></mask>
+    </defs></svg>)xxx");
+    const auto *cpMask = dynamic_cast<const Draw2d::Svg::Mask *>(EntityIn(svgDocument, "m"));
+    REQUIRE( cpMask != nullptr );
+    REQUIRE( cpMask->getX()->fValue == 1.0f );
+    REQUIRE( cpMask->getHeight()->fValue == 4.0f );
+    REQUIRE( cpMask->getMaskUnits() == Draw2d::UserSpaceOnUse );
+    REQUIRE( cpMask->getMaskContentUnits() == Draw2d::UserSpaceOnUse );
+    size_t nChildren = 0;
+    for(const auto *cpChild : cpMask->enumerateChildren()) { (void) cpChild; nChildren++; }
+    REQUIRE( nChildren == 1 );
+    const auto *cpDefaults = dynamic_cast<const Draw2d::Svg::Mask *>(EntityIn(svgDocument, "defaults"));
+    REQUIRE( cpDefaults->getMaskUnits() == Draw2d::ObjectBoundingBox );
+    REQUIRE( !cpDefaults->getX().has_value() );
+}
+
+TEST_CASE("15b. opacity and mask come through CSS on any element", "[mask][css][svg]") {
+    using Catch::Approx;
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svgDocument = svgParser.parse(R"xxx(<svg>
+        <style>.cls-13 { opacity: .33; } .cls-m { mask: url(#mask-2); }</style>
+        <defs><mask id="mask-2"/></defs>
+        <path id="p" class="cls-13" d="M0,0 L1,1 Z"/>
+        <g id="g" class="cls-m" opacity="0.5"><path d="M0,0 L1,1 Z"/></g>
+        <path id="plain" d="M0,0 L1,1 Z"/>
+    </svg>)xxx");
+    REQUIRE( EntityIn(svgDocument, "p")->getOpacity() == Approx(0.33f) );
+    REQUIRE( EntityIn(svgDocument, "g")->getOpacity() == Approx(0.5f) );
+    REQUIRE( EntityIn(svgDocument, "g")->getMaskId() == "mask-2" );
+    REQUIRE( EntityIn(svgDocument, "plain")->getOpacity() == 1.0f );
+    REQUIRE( EntityIn(svgDocument, "plain")->getMaskId().empty() );
+}
+
+TEST_CASE("15c. mix-blend-mode and isolation come through CSS", "[blend][css][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svgDocument = svgParser.parse(R"xxx(<svg>
+        <style>.cls-438 { mix-blend-mode: hard-light; } .cls-2082 { isolation: isolate; }</style>
+        <image id="i" class="cls-438" width="1" height="1"/>
+        <g id="g" class="cls-2082" mix-blend-mode="screen"/>
+        <g id="bad" mix-blend-mode="sparkle"/>
+    </svg>)xxx");
+    REQUIRE( EntityIn(svgDocument, "i")->getBlendMode() == Draw2d::Svg::BlendMode::HardLight );
+    REQUIRE( EntityIn(svgDocument, "g")->getBlendMode() == Draw2d::Svg::BlendMode::Screen );
+    REQUIRE( EntityIn(svgDocument, "g")->getIsolate() );
+    REQUIRE( !EntityIn(svgDocument, "i")->getIsolate() );
+    REQUIRE( EntityIn(svgDocument, "bad")->getBlendMode() == Draw2d::Svg::BlendMode::Normal );
+}
+
+TEST_CASE("16a. clipPath and clip-path are parsed, the latter through CSS", "[clip][css][svg]") {
+    Draw2d::Svg::SvgParser svgParser {};
+    auto svgDocument = svgParser.parse(R"xxx(<svg>
+        <style>.cls-c { clip-path: url(#clip); }</style>
+        <defs>
+            <clipPath id="clip"><rect width="2" height="2"/><path d="M0,0 L1,1 L0,1 Z"/></clipPath>
+            <clipPath id="box" clipPathUnits="objectBoundingBox"/>
+        </defs>
+        <g id="g" class="cls-c"/>
+        <rect id="r" clip-path="url(#box)" width="1" height="1"/>
+    </svg>)xxx");
+    const auto *cpClip = dynamic_cast<const Draw2d::Svg::ClipPath *>(EntityIn(svgDocument, "clip"));
+    REQUIRE( cpClip != nullptr );
+    REQUIRE( cpClip->getClipPathUnits() == Draw2d::UserSpaceOnUse );
+    size_t nChildren = 0;
+    for(const auto *cpChild : cpClip->enumerateChildren()) { (void) cpChild; nChildren++; }
+    REQUIRE( nChildren == 2 );
+    REQUIRE( dynamic_cast<const Draw2d::Svg::ClipPath *>(EntityIn(svgDocument, "box"))->getClipPathUnits() == Draw2d::ObjectBoundingBox );
+    REQUIRE( EntityIn(svgDocument, "g")->getClipPathId() == "clip" );
+    REQUIRE( EntityIn(svgDocument, "r")->getClipPathId() == "box" );
 }

@@ -40,7 +40,7 @@ namespace Draw2d::Svg {
         case FillRule::NotAFillRule: return "NotAFillRule";
         case FillRule::NonZero: return "NonZero";
         case FillRule::EvenOdd: return "EvenOdd";
-        default: return Core::String("Invalid illegal unknown unrecognized unhandled garbage FillRule {}", static_cast<int32_t>(enumFillRule));
+        default: return Core::String::Format("Invalid illegal unknown unrecognized unhandled garbage FillRule {}", static_cast<int32_t>(enumFillRule));
         }
     }
 }

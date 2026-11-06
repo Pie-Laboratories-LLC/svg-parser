@@ -17,6 +17,10 @@
 #ifndef DRAW2D_SVG_SVGDOCUMENT_DOT_HPP
 #define DRAW2D_SVG_SVGDOCUMENT_DOT_HPP
 
+#include <functional>
+#include <unordered_map>
+#include <unordered_set>
+
 #ifndef DRAW2D_SVG_GRADIENTTEMPLATE_DOT_HPP
     #include "svg/GradientTemplate.hpp"
 #endif
@@ -91,6 +95,32 @@ namespace Draw2d::Svg {
                 return (*search).second;
             }
             throw SvgException("No such Gradient with cstrId {}", cstrId.c_str());
+        }
+
+        // fills in what each gradient leaves unset from the gradient its href names (following
+        //  chains, ignoring cycles and missing targets), then from the SVG defaults.  Called
+        //  once, after parsing, so a gradient can reference one defined later.
+        void resolveGradientReferences()
+        {
+            std::unordered_map<Core::String, GradientTemplate *> byId {};
+            for(auto &pGradient : m_gradients) {
+                if(!Core::String::IsEmpty(pGradient->strId)) byId.emplace(pGradient->strId, pGradient.get());
+            }
+            std::unordered_set<const GradientTemplate *> resolved {};
+            std::unordered_set<const GradientTemplate *> resolving {};
+            std::function<void(GradientTemplate *)> resolve = [&](GradientTemplate *pGradient) {
+                if(resolved.contains(pGradient) || !resolving.insert(pGradient).second) return;
+                if(!Core::String::IsEmpty(pGradient->strHrefId)) {
+                    if(auto it = byId.find(pGradient->strHrefId); it != byId.end()) {
+                        resolve(it->second);
+                        pGradient->inheritFrom(*it->second);
+                    }
+                }
+                pGradient->applyDefaults();
+                resolving.erase(pGradient);
+                resolved.insert(pGradient);
+            };
+            for(auto &pGradient : m_gradients) resolve(pGradient.get());
         }
 
         const GradientTemplate *storeGradient(std::unique_ptr<GradientTemplate> pGradientTemplate)

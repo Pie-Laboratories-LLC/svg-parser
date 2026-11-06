@@ -40,7 +40,7 @@ namespace Draw2d::Svg {
         case LineCap::Butt: return "Butt :)";
         case LineCap::Round: return "Round";
         case LineCap::Square: return "Square";
-        default: return Core::String("Invalid illegal unkown unrecognized unhandled garbage line cap {}", static_cast<int32_t>(enumLineCap));
+        default: return Core::String::Format("Invalid illegal unkown unrecognized unhandled garbage line cap {}", static_cast<int32_t>(enumLineCap));
         }
     }
 }

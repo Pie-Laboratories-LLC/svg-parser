@@ -33,6 +33,11 @@ namespace Draw2d::Svg {
        ,m_enumLineJoin(params.lineJoin)
        ,m_fMiterLimit(params.miterLimit)
        ,m_dashArray(std::move(params.dashArray))
+       ,m_fOpacity(params.opacity)
+       ,m_strMaskId(params.maskId)
+       ,m_strClipPathId(params.clipPathId)
+       ,m_enumBlendMode(params.blendMode)
+       ,m_bIsolate(params.bIsolate)
        ,m_strCssClass(params.cssClass)
        ,m_strCssStyle(params.cssStyle)
     {
@@ -58,6 +63,8 @@ namespace Draw2d::Svg {
         m_enumLineJoin = copy.m_enumLineJoin;
         m_fMiterLimit = copy.m_fMiterLimit;
         m_dashArray = copy.m_dashArray;
+        m_fOpacity = copy.m_fOpacity;
+        m_strMaskId = copy.m_strMaskId;
         m_strCssClass = copy.m_strCssClass;
         m_strCssStyle = copy.m_strCssStyle;
     }
@@ -83,6 +90,8 @@ namespace Draw2d::Svg {
        ,m_enumLineJoin(move.m_enumLineJoin)
        ,m_fMiterLimit(move.m_fMiterLimit)
        ,m_dashArray(std::move(move.m_dashArray))
+       ,m_fOpacity(move.m_fOpacity)
+       ,m_strMaskId(std::move(move.m_strMaskId))
        ,m_strCssClass(move.m_strCssClass)
        ,m_strCssStyle(move.m_strCssStyle)
     {}

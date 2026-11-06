@@ -1,3 +1,19 @@
+/*
+ * Copyright 2026 Pie Laboratories
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include <xercesc/dom/DOM.hpp>               // xc::DOMDocument, xc::DOMElement, DOMNodeList, etc
 #include "xml/XercesDomEntity.hpp"
 
@@ -17,6 +33,12 @@ namespace Xml {
         m_pDomNode = pDomNode;
     }
 
+    DomEntityType XercesDomEntity::getDomEntityType() const
+    {
+        if(dynamic_cast<const xc::DOMElement *>(m_pDomNode)) return DomEntityType::Entity;
+        return DomEntityType::Text;
+    }
+
     Core::String XercesDomEntity::getTagName() const
     {
         String strTagName = m_pDomNode->getNodeName();
@@ -29,17 +51,21 @@ namespace Xml {
         return strTextContent.getTranscoded();
     }
 
-    std::unique_ptr<IDomEntity> XercesDomEntity::getFirstChild()
+    std::unique_ptr<IDomEntity> XercesDomEntity::getFirstChild(bool bSkipTextNodes)
     {
         DOMNode *pChildNode = m_pDomNode->getFirstChild();
-        DOMElement *pChildElement = __getFirstElement(pChildNode);
-        if(pChildElement) return std::make_unique<XercesDomEntity>(pChildElement);
+        if(bSkipTextNodes) pChildNode = __getFirstElement(pChildNode);
+        else pChildNode = __skipNonProcessed(pChildNode);
+
+        if(pChildNode) return std::make_unique<XercesDomEntity>(pChildNode);
         return nullptr;
     }
 
-    std::unique_ptr<IDomEntity> XercesDomEntity::getNextSibling()
+    std::unique_ptr<IDomEntity> XercesDomEntity::getNextSibling(bool bSkipTextNodes)
     {
-        xc::DOMNode *pDomNode = __getFirstElement(m_pDomNode->getNextSibling());
+        xc::DOMNode *pDomNode = m_pDomNode->getNextSibling();
+        if(bSkipTextNodes) pDomNode = __getFirstElement(pDomNode);
+        else pDomNode = __skipNonProcessed(pDomNode);
 
         return pDomNode ? std::make_unique<XercesDomEntity>(pDomNode) : nullptr;
     }
@@ -103,5 +129,19 @@ namespace Xml {
         return nullptr;
     }
 
+    DOMElement *XercesDomEntity::__skipNonProcessed(DOMNode *pChildNode)
+    {
+        while(pChildNode) {
+            if (pChildNode->getNodeType() != DOMNode::ELEMENT_NODE
+             && pChildNode->getNodeType() != DOMNode::TEXT_NODE
+             && pChildNode->getNodeType() != DOMNode::CDATA_SECTION_NODE) {
+                pChildNode = pChildNode->getNextSibling();
+                continue;
+            }
+            return static_cast<DOMElement*>(pChildNode);
+        }
+
+        return nullptr;
+    }
 
 }

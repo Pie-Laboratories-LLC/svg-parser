@@ -40,7 +40,56 @@
 
 namespace Draw2d::Svg {
 
-    std::regex SvgDParser::PathPartsRegex { R"xxx(,?\s*(?:([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)|([a-z])\s*))xxx", std::regex::icase };
+    namespace {
+
+        bool IsDigit(char c) { return c >= '0' && c <= '9'; }
+
+        // the next token of path data from nPos: a number as path data writes them (so "10-5"
+        //  and ".5.5" each split in two) or a single command letter, separators and anything
+        //  else skipped -- the tokens the std::regex this replaces found, at a fraction of
+        //  the cost (it was most of the parse time).  Empty at the end.
+        std::string_view NextToken(std::string_view d, size_t &nPos)
+        {
+            while (nPos < d.size()) {
+                const char c = d[nPos];
+                if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) return d.substr(nPos++, 1);
+                if (IsDigit(c) || c == '.' || c == '+' || c == '-') {
+                    size_t nEnd = nPos;
+                    if (d[nEnd] == '+' || d[nEnd] == '-') nEnd++;
+                    size_t nIntegerDigits = 0;
+                    while (nEnd < d.size() && IsDigit(d[nEnd])) { nEnd++; nIntegerDigits++; }
+                    bool bNumber = nIntegerDigits > 0;
+                    if (nEnd < d.size() && d[nEnd] == '.') {
+                        size_t nAfter = nEnd + 1, nFractionDigits = 0;
+                        while (nAfter < d.size() && IsDigit(d[nAfter])) { nAfter++; nFractionDigits++; }
+                        // "5." and ".5" are numbers; "." alone isn't
+                        if (nIntegerDigits > 0 || nFractionDigits > 0) {
+                            nEnd = nAfter;
+                            bNumber = true;
+                        }
+                    }
+                    if (!bNumber) {
+                        // a lone sign or point: skipped
+                        nPos++;
+                        continue;
+                    }
+                    // an exponent only when it's complete ("1e" is 1, then the letter e)
+                    if (nEnd < d.size() && (d[nEnd] == 'e' || d[nEnd] == 'E')) {
+                        size_t nExponent = nEnd + 1, nExponentDigits = 0;
+                        if (nExponent < d.size() && (d[nExponent] == '+' || d[nExponent] == '-')) nExponent++;
+                        while (nExponent < d.size() && IsDigit(d[nExponent])) { nExponent++; nExponentDigits++; }
+                        if (nExponentDigits > 0) nEnd = nExponent;
+                    }
+                    const std::string_view token = d.substr(nPos, nEnd - nPos);
+                    nPos = nEnd;
+                    return token;
+                }
+                nPos++;
+            }
+            return {};
+        }
+
+    } // namespace
 
     void SvgDParser::setParserCallback(SvgParser::SvgParserCallback callback)
     {
@@ -50,15 +99,11 @@ namespace Draw2d::Svg {
     std::pair<std::vector<PathMove>, std::vector<float>> SvgDParser::parseD(const Core::String &cstrD)
     {
         Core::Logger::Singleton().Trace(LoggingCategories::SVG, "SVGD: new path");
-        std::sregex_iterator begin(cstrD.begin(), cstrD.end(), PathPartsRegex);
-        std::sregex_iterator end;
-
-        for (auto it = begin; it != end ; it++)
+        const std::string_view d = cstrD;
+        size_t nTokenPos = 0;
+        for (std::string_view token = NextToken(d, nTokenPos); !token.empty(); token = NextToken(d, nTokenPos))
         {
-            Core::String strValue = (*it).str();
-            // get rid of any left over cruft from "lexxing"
-            strValue.trim_start_in_place(',');
-            strValue.trim_in_place();
+            Core::String strValue { std::string(token) };
 
             // first see if this is a new command.
             if (strValue.length() == 1 && std::isalpha(strValue.front()))
@@ -178,11 +223,11 @@ namespace Draw2d::Svg {
             if(moveTo && bClosed) {
                 Core::Logger::Singleton().Trace(LoggingCategories::SVG, "SVGD: _final_ finish {} ({}), cp = {}, {}", PathMoveToString(enumCurrentPathMove), currentPathMoveRelative, fCurrentX, fCurrentY);
             }
-            std::string strReason = Core::String("trailing {} doesn't have enough points.", PathMoveToString(enumCurrentPathMove));
+            std::string strReason = Core::String::Format("trailing {} doesn't have enough points.", PathMoveToString(enumCurrentPathMove));
             if(!bClosed) throw SvgException("Path not closed {}", strReason);
-            // see PathMove::Close case above; we don't deal with this in __checkSavePoint, so special
-            //  case add this explicitly
-            pathMoves.push_back(PathMove::ClosePath);
+            // the last subpath stays open: fill closes it implicitly but stroke must not, which
+            //  is the renderer's call (an appended ClosePath here drew a closing edge on every
+            //  stroked open path)
         }
 
         Core::Logger::Singleton().Trace(LoggingCategories::SVG, "SVGD: DONE path");

@@ -17,10 +17,13 @@
 #ifndef POLY_DOT_HPP
 #define POLY_DOT_HPP
 
+#include <algorithm>
 #include <cmath>
 #include <vector>
-#include <format>
-#include <stdexcept>
+
+#ifndef DRAW2D_DRAW2DEXCEPTION_DOT_HPP
+    #include "draw2d/Draw2dException.hpp"
+#endif
 
 namespace Draw2d {
 
@@ -28,22 +31,46 @@ namespace Draw2d {
     public:
         static const double POLYNOMIAL_TOLERANCE; // = 1e-6;
         static const double TOLERANCE; //            = 1e-12;
+        // le discriminant d'une cubique est nul à cette fraction près de son plus grand terme
+        static constexpr double DISCRIMINANT_RELATIF = 1e-12;
+        // un coefficient de tête est nul à cette fraction près du plus grand des autres
+        //  coefficients non constants
+        static constexpr double COEFFICIENT_DE_TÊTE_RELATIF = 1e-6;
 
         template <typename TargetType>
         requires std::is_arithmetic_v<TargetType>
+        // les racines réelles d'un polynôme, coefficients du plus haut degré au
+        // plus bas. Les coefficients de tête nuls (à TOLERANCE près) abaissent
+        // le degré; le dernier, la constante, n'est jamais retiré.
+        // Nul aussi, un coefficient de tête minuscule devant les autres: une
+        // cubique d'Illustrator qui est en fait une quadratique a un t^3 de
+        // l'ordre de 1e-7 des autres termes, et la rendre unitaire (diviser par
+        // lui) noie ses racines dans les arrondis. Sur [0,1], le seul intervalle
+        // qui intéresse une courbe de Bézier, le retirer déplace le polynôme
+        // d'au plus ce coefficient; la racine perdue est vers t ~ 1e6.
+        // Degré 0: une constante -- non nulle, aucune racine; nulle partout, la
+        // courbe est couchée sur la droite (un bord horizontal sur la ligne de
+        // balayage): aucune intersection isolée, comme dans l'original
         static std::vector<TargetType> getPolynomialRoots(std::vector<TargetType> arr) {
+            if (arr.empty()) return {};
 
-            unsigned degree  = arr.size() - 1;
-            unsigned n       = degree;
-            for (unsigned i = 0; i <= degree; i++) {
-                if (std::abs(arr[i]) <= TOLERANCE) degree--; else break;
+            const size_t n = arr.size() - 1;
+            size_t premier = 0;
+            while (premier < n) {
+                TargetType plusGrandAutre = 0;
+                for (size_t i = premier + 1; i < n; i++) plusGrandAutre = std::max(plusGrandAutre, std::abs(arr[i]));
+                const TargetType tête = std::abs(arr[premier]);
+                if (tête > TOLERANCE && tête > COEFFICIENT_DE_TÊTE_RELATIF * plusGrandAutre) break;
+                premier++;
             }
+            const size_t degree = n - premier;
 
             switch (degree) {
-            case 1: return getLinearRoots(arr[n], arr[n - 1]); break;
-            case 2: return getQuadraticRoots(arr[n], arr[n - 1], arr[n - 2]); break;
-            case 3: return getCubicRoots(arr[n], arr[n - 1], arr[n - 2], arr[n - 3]); break;
-            default: /*return new double[] { };*/throw std::runtime_error(std::format("Invalid degree {} from {}", degree, arr.size()));/**/
+            case 0: return {};
+            case 1: return getLinearRoots(arr[n], arr[n - 1]);
+            case 2: return getQuadraticRoots(arr[n], arr[n - 1], arr[n - 2]);
+            case 3: return getCubicRoots(arr[n], arr[n - 1], arr[n - 2], arr[n - 3]);
+            default: throw Draw2dException("Unsupported degree {} ({} coefficients)", degree, arr.size());
             }
         }
 
@@ -84,34 +111,57 @@ namespace Draw2d {
             TargetType offset  = c2 / 3;
             TargetType discrim = b * b / 4 + a * a * a / 27;
             TargetType halfB   = b / 2;
-        
-            if (std::abs(discrim) <= POLYNOMIAL_TOLERANCE) discrim = 0;
-        
+
+            // nul seulement aux arrondis de ses deux termes près: une tolérance
+            //  absolue (c'était 1e-6) dépend de l'échelle de la courbe, et fondait
+            //  les deux racines proches et distinctes d'une courbe qui frôle une
+            //  ligne de balayage en une seule, fausse -- un nombre impair de croisements
+            const TargetType échelleDiscrim = std::max(halfB * halfB, std::abs(a * a * a / 27));
+            if (std::abs(discrim) <= DISCRIMINANT_RELATIF * échelleDiscrim) discrim = 0;
+
+            std::vector<TargetType> roots;
             if (discrim > 0) {
                 TargetType e = std::sqrt(discrim);
                 TargetType root = std::cbrt(-halfB + e) + std::cbrt(-halfB - e);
-                return std::vector<TargetType> { root - offset };
+                roots = { root - offset };
             }
-            if (discrim < 0) {
+            else if (discrim < 0) {
                 TargetType distance = std::sqrt(-a/3);
                 TargetType angle    = std::atan2(std::sqrt(-discrim), -halfB) / 3;
                 TargetType cos      = std::cos(angle);
                 TargetType sin      = std::sin(angle);
                 TargetType sqrt3    = std::sqrt(3);
-        
-                return std::vector<TargetType> {
+
+                roots = {
                     2 * distance * cos - offset,
                     -distance * (cos + sqrt3 * sin) - offset,
                     -distance * (cos - sqrt3 * sin) - offset
                 };
             }
-            // discrim == 0: a repeated root case
-            TargetType tmp = std::cbrt(-halfB);
-            return std::vector<TargetType> {
-                2 * tmp - offset,
-                // really should return next root twice, but we return only one
-                -tmp - offset
-            };
+            else {
+                // une racine double, rendue deux fois: comme croisement, c'est une
+                //  paire qui s'annule
+                TargetType tmp = std::cbrt(-halfB);
+                roots = { 2 * tmp - offset, -tmp - offset, -tmp - offset };
+            }
+
+            // Cardan et la forme trigonométrique perdent des chiffres quand les
+            //  racines sont proches: quelques pas de Newton sur la cubique même,
+            //  gardés tant qu'ils l'améliorent
+            for (TargetType &racine : roots) {
+                auto valeur = [&](TargetType t) { return ((t + c2) * t + c1) * t + c0; };
+                TargetType fRacine = valeur(racine);
+                for (int pas = 0; pas < 4 && fRacine != 0; pas++) {
+                    const TargetType dérivée = (3 * racine + 2 * c2) * racine + c1;
+                    if (dérivée == 0) break;
+                    const TargetType suivante = racine - fRacine / dérivée;
+                    const TargetType fSuivante = valeur(suivante);
+                    if (!(std::abs(fSuivante) < std::abs(fRacine))) break;
+                    racine = suivante;
+                    fRacine = fSuivante;
+                }
+            }
+            return roots;
         } // std::vector<TargetType> getCubicRoots(double C0, double C1, double C2, double C3)
     }; // class Poly
 

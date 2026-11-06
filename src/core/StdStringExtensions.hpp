@@ -18,6 +18,7 @@
 #define CORE_STDSTRINGEXTENSIONS_DOT_HPP
 
 #include <cstring>
+#include <memory>
 
 // claude <3
 struct CStrHash {

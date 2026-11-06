@@ -20,6 +20,8 @@ add_executable(svgparser_tests
     svg/Path-tests.cpp
     svg/SvgDParser-tests.cpp
     svg/SvgParser-tests.cpp
+    svg/StyleSheet-tests.cpp
+    svg/BlendColours-tests.cpp
 )
 
 target_include_directories(svgparser_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

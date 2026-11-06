@@ -17,12 +17,19 @@
 #ifndef DRAW2D_LOGGINGCATEGORIES_DOT_HPP
 #define DRAW2D_LOGGINGCATEGORIES_DOT_HPP
 
+#ifndef CORE_CATGORIE_DOT_HPP
+    #include "core/Catégorie.hpp"
+#endif
+
 namespace Draw2d {
     struct LoggingCategories {
-        static constexpr const char *SVG = "svg";
-        static constexpr const char *FONTZ = "fontz";
-        static constexpr const char *DRAW2D = "draw2d";
+        static inline const Core::Catégorie DRAW2D { "draw2d" };
+        static inline const Core::Catégorie SVG { DRAW2D, "svg" };
+        static inline const Core::Catégorie FONTZ { DRAW2D,"fontz" };
     };
+
+    // la manière nouvelle, pour le code à venir: Info(LOG, "…")
+    inline const Core::Catégorie &LOG = LoggingCategories::DRAW2D;
 }
 
 #endif  /* DRAW2D_LOGGINGCATEGORIES_DOT_HPP */

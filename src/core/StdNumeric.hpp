@@ -17,13 +17,14 @@
 #ifndef CORE_STDNUMERIC_DOT_HPP
 #define CORE_STDNUMERIC_DOT_HPP
 
-#include <charconv>
 #include <limits>
+#include <utility>
 
 namespace Core {
 
     class String;
 
+    std::pair<float, unsigned> ParseFloatPrefix(const String &cstrFloat, unsigned offset = 0, unsigned size = std::numeric_limits<unsigned>::max());
     float ParseFloat(const String &cstrFloat,unsigned offset = 0,unsigned size = std::numeric_limits<unsigned>::max());
 
 #define BASE2 2

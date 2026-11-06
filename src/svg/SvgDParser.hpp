@@ -45,7 +45,6 @@ namespace Draw2d::Svg {
         void setParserCallback(SvgParser::SvgParserCallback callback);
         std::pair<std::vector<PathMove>, std::vector<float>> parseD(const Core::String &cstrD);
 
-        static std::regex PathPartsRegex;
     private:
         inline static std::unordered_map<char,PathMove> PathMoveLookup
         {

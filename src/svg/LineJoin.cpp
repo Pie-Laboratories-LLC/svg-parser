@@ -50,7 +50,7 @@ namespace Draw2d::Svg {
         case LineJoin::Miter: return "Miter";
         case LineJoin::MiterClip: return "MiterClip";
         case LineJoin::Round: return "Round";
-        default: return Core::String("Invalid illegal unknown unrecognized unprcessed garbage line join {}", static_cast<int32_t>(enumLineJoin));
+        default: return Core::String::Format("Invalid illegal unknown unrecognized unprcessed garbage line join {}", static_cast<int32_t>(enumLineJoin));
         }
     }
 }

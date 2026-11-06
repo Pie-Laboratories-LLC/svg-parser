@@ -87,7 +87,8 @@ TEST_CASE("1e. horizontal and vertical lineto only update one axis", "[svg-d]") 
     auto strD = R"xxx(M10 10 H50 V60)xxx";
     Draw2d::Svg::SvgDParser svgDParser {};
     auto [ pathMoves, points ] = svgDParser.parseD(strD);
-    REQUIRE( pathMoves.size() == 4 );
+    // M, H, V -- an open path no longer gets a ClosePath appended
+    REQUIRE( pathMoves.size() == 3 );
     REQUIRE( points.size() == 4 );
     // H50 -> (50,10)
     REQUIRE( points[2] == Catch::Approx(50.0f) );
@@ -236,7 +237,8 @@ TEST_CASE("1t. multiple subpaths via repeated moveto", "[svg-d]") {
     auto strD = R"xxx(M0 0 L10 10 M20 20 L30 30)xxx";
     Draw2d::Svg::SvgDParser svgDParser {};
     auto [ pathMoves, points ] = svgDParser.parseD(strD);
-    REQUIRE( pathMoves.size() == 5 );
+    // M, L, M, L -- both subpaths stay open
+    REQUIRE( pathMoves.size() == 4 );
     REQUIRE( pathMoves[0] == Draw2d::Svg::PathMove::MoveTo );
     REQUIRE( pathMoves[2] == Draw2d::Svg::PathMove::MoveTo );
 }

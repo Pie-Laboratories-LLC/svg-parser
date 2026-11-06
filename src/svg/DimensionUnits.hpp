@@ -43,6 +43,8 @@ namespace Draw2d::Svg {
         Vmax
     };
 
+    // d'après son nom écrit, sans lancer: rien s'il n'en est pas un
+    std::optional<DimensionUnits> ChercherDimensionUnits(std::string_view texte);
     DimensionUnits ParseDimensionUnits(const Core::String &cstrDimensionUnits);
     Core::String DimensionUnitsToString(DimensionUnits enumDimensionUnits);
 }

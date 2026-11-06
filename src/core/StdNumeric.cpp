@@ -16,30 +16,54 @@
 
 #include "core/StdNumeric.hpp"
 
+#include <charconv>
+
 #ifndef CORE_EXCEPTION_DOT_HPP
     #include "core/Exception.hpp"
 #endif
 
 namespace Core {
 
-    float ParseFloat(const String &cstrFloat,unsigned offset,unsigned size) {
-        if(size == std::numeric_limits<unsigned>::max()) size = cstrFloat.length();
+    // le plus long nombre au début de [offset, offset + size): sa valeur, et
+    // combien de caractères il prend. Le reste est à l'appelant -- l'unité
+    // d'une longueur, par exemple: "1e-5em" -> (1e-5, 4), "1em" -> (1, 1).
+    // Un + devant est permis, comme en SVG, bien que from_chars le refuse
+    std::pair<float, unsigned> ParseFloatPrefix(const String &cstrFloat, unsigned offset, unsigned size)
+    {
+        if (offset > cstrFloat.length())
+            throw Exception("Offset {} past the end of: {}", offset, cstrFloat.c_str());
+        size = std::min<unsigned>(size, static_cast<unsigned>(cstrFloat.length()) - offset);
+
+        const char *début = cstrFloat.c_str() + offset;
+        const char *fin = début + size;
+        const char *p = début;
+        if (p != fin && *p == '+') {
+            ++p;
+            // "+-5" n'est pas un nombre
+            if (p != fin && *p == '-') throw Exception("Not a valid float: {}", cstrFloat.substr(offset, size).c_str());
+        }
 
         float fResult;
+        auto [ptr, ec] = std::from_chars(p, fin, fResult);
 
-        auto [ptr, ec] = std::from_chars(cstrFloat.c_str() + offset, cstrFloat.c_str() + size + offset, fResult);
-
-        if (ec == std::errc()) {
-            if(cstrFloat.c_str() + offset + size != ptr) throw Exception("Extra characters at end: {}", cstrFloat.substr(offset, size).c_str());
-        }
-        else if (ec == std::errc::invalid_argument) {
+        if (ec == std::errc::invalid_argument)
             throw Exception("Not a valid float: {}", cstrFloat.substr(offset, size).c_str());
-        }
-        else if (ec == std::errc::result_out_of_range) {
+        if (ec == std::errc::result_out_of_range)
             throw Exception("Value out of range: {}", cstrFloat.substr(offset, size).c_str());
-        }
-        else throw Exception("Internal error, float didn't parse correctly: {}", cstrFloat.substr(offset, size).c_str());
+        if (ec != std::errc())
+            throw Exception("Internal error, float didn't parse correctly: {}", cstrFloat.substr(offset, size).c_str());
 
+        return { fResult, static_cast<unsigned>(ptr - début) };
+    }
+
+    float ParseFloat(const String &cstrFloat, unsigned offset, unsigned size)
+    {
+        if (offset <= cstrFloat.length())
+            size = std::min<unsigned>(size, static_cast<unsigned>(cstrFloat.length()) - offset);
+
+        const auto [fResult, nConsommés] = ParseFloatPrefix(cstrFloat, offset, size);
+        if (nConsommés != size)
+            throw Exception("Extra characters at end: {}", cstrFloat.substr(offset, size).c_str());
         return fResult;
     }
 

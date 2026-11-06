@@ -33,7 +33,7 @@ int main() {
         XMLString::release(&msg);
         return 1;
     }
-    Core::Logger::Instance(std::unordered_set<const char *,CStrHash,CStrEq> { }, Core::Info);
+    Core::Logger::Instance(std::unordered_set<const char *,CStrHash,CStrEq> { }, Core::LogLevel::Info);
 
     auto svgText = R"xxx(
     <svg>

@@ -21,6 +21,51 @@
 #endif
 
 namespace Draw2d::Svg {
+    void GradientTemplate::inheritFrom(const GradientTemplate &referenced)
+    {
+        if(stops.empty()) stops = referenced.cloneStops();
+        if(!bUnitsSpecified && referenced.bUnitsSpecified) {
+            enumGradientUnits = referenced.enumGradientUnits;
+            bUnitsSpecified = true;
+        }
+        if(!bSpreadMethodSpecified && referenced.bSpreadMethodSpecified) {
+            enumSpreadMethod = referenced.enumSpreadMethod;
+            bSpreadMethodSpecified = true;
+        }
+        if(!transform.has_value() && referenced.transform.has_value()) transform = referenced.cloneTransform();
+        if(kind != referenced.kind) return;
+        for(size_t n = 0; n < geometry.size(); n++) {
+            if(!geometrySpecified[n] && referenced.geometrySpecified[n]) {
+                geometry[n] = referenced.geometry[n];
+                geometrySpecified[n] = true;
+            }
+        }
+    }
+
+    void GradientTemplate::applyDefaults()
+    {
+        // defaults aren't marked as specified: a gradient referencing this one must fall back
+        //  to its own defaults (its own centre for fx/fy), not inherit these
+        auto setDefault = [this](size_t nIndex, float fValue) {
+            if(!geometrySpecified[nIndex]) geometry[nIndex] = fValue;
+        };
+        if(kind == linear) {
+            setDefault(0, 0.0f);
+            setDefault(1, 0.0f);
+            setDefault(2, 1.0f);
+            setDefault(3, 0.0f);
+        }
+        else {
+            setDefault(0, 0.5f);
+            setDefault(1, 0.5f);
+            setDefault(2, 0.5f);
+            // the focal point defaults to the centre, whatever the centre turned out to be
+            setDefault(3, geometry[0]);
+            setDefault(4, geometry[1]);
+            setDefault(5, 0.0f);
+        }
+    }
+
     std::vector<Stop<SvgColour>> GradientTemplate::cloneStops() const
     {
         std::vector<Stop<SvgColour>> returnStops{};

@@ -47,6 +47,20 @@ namespace Draw2d::Svg {
         std::vector<Stop<SvgColour>> stops;
         Core::String strHrefId;              // for xlink:href inheritance
 
+        // which of the above the element set itself; unset ones come from the gradient
+        //  strHrefId names, then from the SVG defaults (SvgDocument::resolveGradientReferences)
+        std::array<bool, 6> geometrySpecified {};
+        bool bUnitsSpecified = false;
+        bool bSpreadMethodSpecified = false;
+
+        // takes what this gradient leaves unset from the one it references: stops if it has
+        //  none; units, spread method and transform; geometry only between gradients of the
+        //  same kind
+        void inheritFrom(const GradientTemplate &referenced);
+        // the SVG defaults for any geometry still unset: x1 0, y1 0, x2 100%, y2 0; cx, cy and
+        //  r 50%, fx and fy at the centre, fr 0
+        void applyDefaults();
+
         std::vector<Stop<SvgColour>> cloneStops() const;
         std::optional<std::array<float,6>> cloneTransform() const;
     };

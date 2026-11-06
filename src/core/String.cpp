@@ -25,6 +25,13 @@ namespace Core {
         *this = pszBuffer;
     }
 
+    String::String(size_t nValue)
+    {
+        char pszBuffer[20];
+        sprintf(pszBuffer, "%llu", nValue);
+        *this = pszBuffer;
+    }
+
     String::String(double dValue)
     {
         char pszBuffer[20];
@@ -155,5 +162,14 @@ namespace Core {
         }
     
         return result;
+    }
+
+    String String::repeat(unsigned nCount)
+    {
+        String strResult {};
+        for(unsigned i = 0; i < nCount; i++) {
+            strResult += *this;
+        }
+        return strResult;
     }
 }

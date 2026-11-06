@@ -40,7 +40,7 @@ namespace Core {
     }
 
     Logger &Logger::Singleton() {
-        if (!sm_pSingleton) throw std::runtime_error("Logger not instanced!");
+        if (!sm_pSingleton) throw Exception("Logger not instanced!");
         return *sm_pSingleton;
     }
 

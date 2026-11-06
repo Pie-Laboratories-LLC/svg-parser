@@ -22,9 +22,8 @@
 #endif
 
 namespace Draw2d::Svg {
-    DimensionUnits ParseDimensionUnits(const Core::String &cstrDimensionUnits)
-    {
-        static std::unordered_map<Core::String,DimensionUnits> LookupDimensionUnits = {
+    namespace {
+        const std::unordered_map<Core::String,DimensionUnits> LookupDimensionUnits = {
             { "NotADimensionUnit", DimensionUnits::NotADimensionUnit },
             { "percent", DimensionUnits::Percentage },
             { "%", DimensionUnits::Percentage },
@@ -44,6 +43,17 @@ namespace Draw2d::Svg {
             { "vmin", DimensionUnits::Vmin },
             { "vmax", DimensionUnits::Vmax }
         };
+    }
+
+    std::optional<DimensionUnits> ChercherDimensionUnits(std::string_view texte)
+    {
+        for (const auto &kvp : LookupDimensionUnits)
+            if (kvp.first == texte) return kvp.second;
+        return std::nullopt;
+    }
+
+    DimensionUnits ParseDimensionUnits(const Core::String &cstrDimensionUnits)
+    {
         if (auto search = LookupDimensionUnits.find(cstrDimensionUnits); search != LookupDimensionUnits.end()) return (*search).second;
         throw SvgException("Unrecognized dimension unit {}", cstrDimensionUnits.c_str());
     }
@@ -68,7 +78,7 @@ namespace Draw2d::Svg {
         case DimensionUnits::Vh: return "Vh";
         case DimensionUnits::Vmin: return "Vmin";
         case DimensionUnits::Vmax: return "Vmax";
-        default: throw SvgException("Invalid illegal unknown unrecognized unhandled garbage DimensionUnits {}", static_cast<int32_t>(enumDimensionUnits));
+        default: return Core::String::Format("Invalid illegal unknown unrecognized unhandled garbage DimensionUnits {}", static_cast<int32_t>(enumDimensionUnits));
         }
     }
 

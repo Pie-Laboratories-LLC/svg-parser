@@ -24,18 +24,14 @@
 namespace Draw2d::Svg {
 
     struct SvgGroupParams: public SvgContainerParams {
-        float fOpacity;
     };
 
     class Group: public SvgContainerEntity
     {
     public:
-        float getOpacity() const { return m_fOpacity; }
-
         virtual ~Group() = default;
         Group(SvgGroupParams svgGroupParams):
             SvgContainerEntity(std::move(svgGroupParams))
-           ,m_fOpacity(svgGroupParams.fOpacity)
         {
         }
 
@@ -65,7 +61,6 @@ namespace Draw2d::Svg {
 
     private:
         std::vector<std::unique_ptr<SvgEntity>> m_svgEntities { };
-        float m_fOpacity;
     };
 
 } // namespace Draw2d::Svg

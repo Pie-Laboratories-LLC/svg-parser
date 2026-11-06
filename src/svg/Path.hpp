@@ -38,8 +38,8 @@ namespace Draw2d::Svg {
     class Path: public SvgEntity
     {
     public:
-        std::vector<float> getPoints() const { return m_points; }
-        std::vector<PathMove> getPathMoves() const { return m_pathMoves; }
+        const std::vector<float> &getPoints() const { return m_points; }
+        const std::vector<PathMove> &getPathMoves() const { return m_pathMoves; }
 
         Path(SvgPathParams svgPathParams);
         virtual ~Path() = default;

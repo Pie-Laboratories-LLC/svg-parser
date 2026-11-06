@@ -17,7 +17,16 @@ a complete implementation of the SVG specification.  In broad strokes, it
 supports:
 
 * `<path>`, `<rect>`, `<group>`, `<use>`, `<ellipse>`, `<circle>`, `<defs>`
-* `<linearGradient>`, `<radialGradient>`, `<text>`, `<image>`
+* `<polygon>` and `<polyline>`, parsed into equivalent path data
+* `<linearGradient>`, `<radialGradient>`, including inheritance through `href`
+* `<text>` and nested `<tspan>`, plus `text-anchor`, `font-style`,
+  `font-family` and `font-size`
+* `<image>`
+* `<mask>` and `<clipPath>`, and the `mask` and `clip-path` properties
+* CSS from `<style>` elements and `style` attributes, cascaded by `!important`,
+  specificity and source order; selectors are limited to single compound
+  selectors (e.g. `path.cls-1`, `g#logo.dark`)
+* `opacity`, `mix-blend-mode` and `isolation`
 * fill and stroke operations and "currentColor"
 * limited support for the CSS `var()` primitive in colour attributes, e.g.
   `fill="var(--currentColor,#deadbeef)"`, but see
@@ -45,8 +54,9 @@ optional.  See [Alternatives to Xerces](#alternatives-to-xerces) and
   SvgColour and frequently use fallbacks; it's possible to have
   `fill="var(url(#missing),url(#legit)"` on an element.  Currently, the
   SvgParser only supports fallbacks on SvgColour.
-* Gradient inheritance is only partially implemented.  GradientTemplate
-  includes the href, but the inheritance mechanism is not implemented.
+* CSS selectors with combinators (`g > path`, `g path`), pseudo-classes or
+  attribute tests are skipped, as are @-rules.  `StyleSheet` counts how many
+  selectors it skipped.
 * there's currently no provision for looking up colors specified via
 `--colorN`.  Colours using this pattern are preserved in the AST.
 * dx and dy on `<text>` nodes do not support percentages.  This is something
@@ -168,6 +178,35 @@ depending on the value of the `SVGPARSER_WITH_XERCES` CMake flag (see
 
 # BUILDING
 
+## DEPENDENCIES
+
+SvgParser needs a C++23 compiler, CMake, OpenSSL and (unless built with
+`-DSVGPARSER_WITH_XERCES=OFF`) Xerces-C.  Catch2 is used for the tests; if it
+isn't installed, CMake fetches it.
+
+**macOS (Homebrew):**
+```bash
+brew install xerces-c openssl@3
+```
+Homebrew's `openssl@3` is keg-only, so tell CMake where it is when
+configuring:
+```bash
+cmake -S . -B build -DOPENSSL_ROOT_DIR="$(brew --prefix openssl@3)"
+```
+
+**Linux (Debian/Ubuntu):**
+```bash
+sudo apt-get install -y libssl-dev libxerces-c-dev
+```
+
+**Windows (vcpkg):**
+```bash
+vcpkg install openssl xerces-c --triplet x64-windows-static-md
+```
+then configure with the `windows-vcpkg` preset in `CMakePresets.json`.
+
+## COMPILING
+
 Use the following commands to build the application.
 
 ```bash
@@ -247,7 +286,7 @@ int main() {
         XMLString::release(&msg);
         return 1;
     }
-    Core::Logger::Instance(std::unordered_set<const char *,CStrHash,CStrEq> { }, Core::Info);
+    Core::Logger::Instance(std::unordered_set<const char *,CStrHash,CStrEq> { }, Core::LogLevel::Info);
     auto svgText = R"xxx(
     <svg>
       <g id="g2a">
@@ -337,7 +376,6 @@ These are short-term goals:
   would be a real challenge (see planned SAX2 support below).
 * support for `<pattern...>` elements.  This is another thing for which there is
   extensive support in the rendering layer.
-* Gradient inheritance
 
 These are mid-term goals:
 
@@ -347,14 +385,11 @@ These are mid-term goals:
   haven't had the need for it.
 * support for SMIL animation.  This has a large surface area but fits neatly
   into what I already have in the rendering engine.
-* support for CSS styling.  Currently I grab any style text I find and append it
-  into a string in the SvgDocument, and that's as much as I do.  I want to be
-  sure to support CSS styling as commonly occurs in SVG documents.
-* masking via `<mask...>`
+* fuller CSS selector support: combinators, pseudo-classes and attribute
+  selectors.
 
 Longer term goals:
 
-* clipping via `<clipPath..>`
 * markers via `<marker...>`.  This isn't so challenging to implement, there's
   just no immediate need for this.
 * a SAX2 implementation parser to complement the DOM.

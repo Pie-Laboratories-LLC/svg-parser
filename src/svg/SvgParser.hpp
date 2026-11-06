@@ -50,6 +50,9 @@
 #ifndef DRAW2D_SVG_SVGPATHLENGTHABLE_DOT_HPP
     #include "svg/SvgPathLengthableEntity.hpp"
 #endif
+#ifndef DRAW2D_SVG_STYLESHEET_DOT_HPP
+    #include "svg/StyleSheet.hpp"
+#endif
 
 namespace Core {
     class String;
@@ -85,12 +88,17 @@ namespace Draw2d::Svg {
     class SvgEntity;
     class Path;
     class Group;
+    class Mask;
+    class ClipPath;
     class Use;
     class Rect;
     class Ellipse;
     class Circle;
     class Image;
     class Text;
+    class RawText;
+    struct SvgTSpanParams;
+    class TSpan;
     class SvgColour;
     class SvgPaint;
     class SvgParserContext;
@@ -108,7 +116,14 @@ namespace Draw2d::Svg {
         bool bWithNamespace = false;
         bool bWithValidation = false;
         std::unordered_set<Core::String> useReferences { };
+        // every <style> in the document, gathered before parsing so a stylesheet placed after
+        //  the content still applies to it
+        StyleSheet styleSheet { };
     };
+
+    // an element's declared presentation values, by property name: its presentation
+    //  attributes, overridden by the stylesheet, overridden by its style attribute
+    typedef std::unordered_map<Core::String, Core::String> DeclaredValues;
 
     class SvgParser
     {
@@ -164,12 +179,24 @@ namespace Draw2d::Svg {
         inline static const Core::String PRESERVEASPECTRATIO_ATTRIBUTE = "preserveAspectRatio";
         inline static const Core::String COLOR_ATTRIBUTE = "color";
         inline static const Core::String PATHLENGTH_ATTRIBUTE = "pathLength";
+        inline static const Core::String POINTS_ATTRIBUTE = "points";
+        inline static const Core::String MASK_ATTRIBUTE = "mask";
+        inline static const Core::String MIX_BLEND_MODE_ATTRIBUTE = "mix-blend-mode";
+        inline static const Core::String ISOLATION_ATTRIBUTE = "isolation";
+        inline static const Core::String CLIP_PATH_ATTRIBUTE = "clip-path";
+        inline static const Core::String CLIPPATHUNITS_ATTRIBUTE = "clipPathUnits";
+        inline static const Core::String MASKUNITS_ATTRIBUTE = "maskUnits";
+        inline static const Core::String MASKCONTENTUNITS_ATTRIBUTE = "maskContentUnits";
         inline static const Core::String CROSSORIGIN_ATTRIBUTE = "crossorigin";
         inline static const Core::String DECODING_ATTRIBUTE = "decoding";
         inline static const Core::String FETCHPRIORITY_ATTRIBUTE = "fetchpriority";
         inline static const Core::String ROTATE_ATTRIBUTE = "rotate";
         inline static const Core::String TEXTLENGTH_ATTRIBUTE = "textLength";
         inline static const Core::String LENGTHADJUST_ATTRIBUTE = "lengthAdjust";
+        inline static const Core::String FONTSIZE_ATTRIBUTE = "font-size";
+        inline static const Core::String FONTFAMILY_ATTRIBUTE = "font-family";
+        inline static const Core::String FONTSTYLE_ATTRIBUTE = "font-style";
+        inline static const Core::String TEXTANCHOR_ATTRIBUTE = "text-anchor";
         inline static const Core::String DEFINITIONS_NAME = "defs";
         inline static const Core::String GROUP_NAME = "g";
         inline static const Core::String USE_NAME = "use";
@@ -181,6 +208,10 @@ namespace Draw2d::Svg {
         inline static const Core::String RECT_NAME = "rect";
         inline static const Core::String ELLIPSE_NAME = "ellipse";
         inline static const Core::String CIRCLE_NAME = "circle";
+        inline static const Core::String POLYGON_NAME = "polygon";
+        inline static const Core::String MASK_NAME = "mask";
+        inline static const Core::String CLIP_PATH_NAME = "clipPath";
+        inline static const Core::String POLYLINE_NAME = "polyline";
         inline static const Core::String IMAGE_NAME = "image";
         inline static const Core::String IMAGE_ALTERNATE_NAME = "img";
         inline static const Core::String TEXT_NAME = "text";
@@ -219,6 +250,7 @@ namespace Draw2d::Svg {
         static std::regex MatrixRegex;
         static std::regex DimensionRegex;
         static std::regex DataUriRegex;
+        static std::regex NumberRegex;
 
     private:
         SvgParserCallback m_callback = [](SvgParserStatus, const Core::String &) {}; // noop
@@ -237,19 +269,31 @@ namespace Draw2d::Svg {
 
         const SvgEntity *__parseSvgEntity(SvgParseState &svgParseState, Xml::IDomEntity *pChildElement, SvgParserContext svgParserContext);
 
+        void __collectStyleSheets(SvgParseState &svgParseState, Xml::IDomEntity *pElement);
+        DeclaredValues __declaredValues(SvgParseState &svgParseState, Xml::IDomEntity *pElement);
         template <typename F>
-        void __applyIfSet(Xml::IDomEntity *pElement, const Core::String &cstrAttributeName, F &&apply);
-        void __updateInheritedProperties(SvgParseState &svgParseState, Xml::IDomEntity *pElement, SvgParserContext &svgParserContext);
-        void __parseCommonProperties(SvgParseState &svgParseState, Xml::IDomEntity *pRenderedElement, SvgEntityParams &params, const SvgParserContext &svgParserContext);
+        void __applyIfSet(const DeclaredValues &declaredValues, const Core::String &cstrPropertyName, F &&apply);
+        // returns the element's declared values, for the non-inherited properties the caller needs
+        DeclaredValues __updateInheritedProperties(SvgParseState &svgParseState, Xml::IDomEntity *pElement, SvgParserContext &svgParserContext);
+        float __parseLength(const Core::String &cstrLength, const SvgParserContext &svgParserContext);
+        float __parseUnitInterval(const Core::String &cstrValue);
+        void __parseCommonProperties(SvgParseState &svgParseState, Xml::IDomEntity *pRenderedElement, SvgEntityParams &params, const SvgParserContext &svgParserContext, const DeclaredValues &declaredValues);
         void __saveEntityToDocument(SvgParseState &svgParseState,const SvgEntity *cpEntity);
+        const Mask *__parseMask(SvgParseState &svgParseState, Xml::IDomEntity *pMaskElement, SvgParserContext svgParserContext);
+        const ClipPath *__parseClipPath(SvgParseState &svgParseState, Xml::IDomEntity *pClipPathElement, SvgParserContext svgParserContext);
         const Group *__parseGroup(SvgParseState &svgParseState, Xml::IDomEntity *pGroupNode, SvgParserContext svgParserContext);
         const Path *__parsePath(SvgParseState &svgParseState, Xml::IDomEntity *pPathNode, const SvgParserContext &svgParserContextIn);
+        // <polygon> (bClosed) and <polyline>
+        const Path *__parsePolyPoints(SvgParseState &svgParseState, Xml::IDomEntity *pElement, SvgParserContext svgParserContext, bool bClosed);
         const Use *__parseUse(SvgParseState &svgParseState, Xml::IDomEntity *pUseElement, SvgParserContext svgParserContext);
         const Rect *__parseRect(SvgParseState &svgParseState, Xml::IDomEntity *pRectElement, SvgParserContext svgParserContext);
         const Ellipse *__parseEllipse(SvgParseState &svgParseState, Xml::IDomEntity *pEllipseElement, SvgParserContext svgParserContext);
         const Circle *__parseCircle(SvgParseState &svgParseState, Xml::IDomEntity *pCircleElement, SvgParserContext svgParserContext);
         const Image *__parseImage(SvgParseState &svgParseState, Xml::IDomEntity *pImageElement, SvgParserContext svgParserContext);
         const Text *__parseText(SvgParseState &svgParseState, Xml::IDomEntity *pTextElement, SvgParserContext svgParserContext);
+        void __parseCommonTextProperties(SvgTSpanParams &svgTSpanParams, Xml::IDomEntity *pTextElement);
+        RawText __parseRawText(Xml::IDomEntity *pTextElement);
+        std::unique_ptr<TSpan> __parseTSpan(Xml::IDomEntity *pTextElement);
 
         Core::String __retrieveHref(SvgParseState &svgParseState, Xml::IDomEntity *pElement);
         std::vector<float> __parsePoints(const Core::String &d, size_t &pos, size_t nMaximumPoints = 0, bool bExactMaximum = false, bool slurp = false);

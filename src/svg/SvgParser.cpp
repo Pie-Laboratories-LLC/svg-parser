@@ -42,6 +42,18 @@
 #ifndef DRAW2D_SVG_USE_DOT_HPP
     #include "svg/Use.hpp"
 #endif
+#ifndef DRAW2D_SVG_POLYGON_DOT_HPP
+    #include "svg/Polygon.hpp"
+#endif
+#ifndef DRAW2D_SVG_MASK_DOT_HPP
+    #include "svg/Mask.hpp"
+#endif
+#ifndef DRAW2D_SVG_CLIPPATH_DOT_HPP
+    #include "svg/ClipPath.hpp"
+#endif
+#ifndef DRAW2D_SVG_POLYLINE_DOT_HPP
+    #include "svg/Polyline.hpp"
+#endif
 #ifndef DRAW2D_SVG_GROUP_DOT_HPP
     #include "svg/Group.hpp"
 #endif
@@ -84,6 +96,9 @@
 #ifndef DRAW2D_SVG_LINEJOIN_DOT_HPP
     #include "svg/LineJoin.hpp"
 #endif
+#ifndef DRAW2D_SVG_TEXTPARTS_DOT_HPP
+    #include "svg/TextParts.hpp"
+#endif
 #ifndef SVG_SVGDPARSER_DOT_HPP
     #include "svg/SvgDParser.hpp"
 #endif
@@ -102,6 +117,10 @@
 #ifndef CORE_BASE64_DOT_HPP
     #include "core/Base64.hpp"
 #endif
+#ifndef CORE_LOGGER_DOT_HPP
+    #include "core/Logger.hpp"
+#endif
+#include "draw2d/LoggingCategories.hpp"
 
 namespace Draw2d::Svg {
 
@@ -135,8 +154,10 @@ namespace Draw2d::Svg {
         };
         SvgParserContext svgParserContext { };
         svgParserContext.setViewportWidth(fViewportWidth);
-        svgParserContext.setViewportHeight(fViewportWidth);
+        svgParserContext.setViewportHeight(fViewportHeight);
+        __collectStyleSheets(svgParseState, domEntity.get());
         (void) __parseSvgElement(svgParseState, domEntity.get(), svgParserContext);
+        pSvgDocument->resolveGradientReferences();
 
 //        __resolveUses(svgParseState);
 
@@ -147,13 +168,15 @@ namespace Draw2d::Svg {
     std::regex SvgParser::SvgHslRegex { R"xxx(^\s*hsla?\s*\(\s*([+-]?\d*\.?\d+)\s*(deg|grad|rad|turn)?\s*,?\s*([+-]?\d*\.?\d+)\s*(%?)\s*,?\s*([+-]?\d*\.?\d+)\s*(%?)\s*(?:[,/]\s*([+-]?\d*\.?\d+)(%?)\s*)?\)\s*$)xxx" };
     std::regex SvgParser::UrlRegex { R"xxx(url\(#([^)]+)\))xxx"};
     std::regex SvgParser::VarRegex { R"xxx(^\s*var\s*\()xxx"};
-    std::regex SvgParser::HexColourRegex { R"xxx(^#([0-9a-f]{6,8})$)xxx", std::regex::icase };
+    std::regex SvgParser::HexColourRegex { R"xxx(^#([0-9a-f]{3,8})$)xxx", std::regex::icase };
     std::regex SvgParser::TranslateRegex { R"xxx(^\s*translate\(([^)]+)\))xxx", std::regex::icase };
     std::regex SvgParser::ScaleRegex { R"xxx(^\s*scale\(([^)]+)\))xxx", std::regex::icase };
     std::regex SvgParser::RotateRegex { R"xxx(^\s*rotate\(([^)]+)\))xxx", std::regex::icase };
     std::regex SvgParser::SkewXyRegex { R"xxx(^\s*skew([XY])\(([^)]+)\))xxx", std::regex::icase };
     std::regex SvgParser::MatrixRegex { R"xxx(^\s*matrix\(([^)]+)\))xxx", std::regex::icase };
     std::regex SvgParser::DimensionRegex { R"xxx(([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)\s*(%|px|pt|pc|cm|mm|in|q|em|ex|ch|rem|vw|vh|vmin|vmax)?)xxx", std::regex::icase };
+    // a number as path data writes it: separators optional where unambiguous ("10-5", ".5.5")
+    std::regex SvgParser::NumberRegex { R"xxx([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)xxx" };
     std::regex SvgParser::DataUriRegex { R"xxx(^data:image/(png|gif|jpe?g|svg\+xml)((?:;(?!base64\s*,)[a-zA-Z0-9\-]+(?:=[^;,]*)?)*)(;base64)?,)xxx", std::regex::icase };
 
 
@@ -175,8 +198,8 @@ namespace Draw2d::Svg {
     {
         SvgSvgParams svgSvgParams { SvgContainerParams { SvgEntityParams { .svgDocument = svgParseState.svgDocument } } };
 
-        __updateInheritedProperties(svgParseState, pSvgElement, svgParserContext);
-        __parseCommonProperties(svgParseState, pSvgElement, svgSvgParams, svgParserContext);
+        const DeclaredValues declaredValues = __updateInheritedProperties(svgParseState, pSvgElement, svgParserContext);
+        __parseCommonProperties(svgParseState, pSvgElement, svgSvgParams, svgParserContext, declaredValues);
 
         // paranoia will destroya.  TODO - we don't validate any other tag names like this
         //  the other methods could profit from this
@@ -201,7 +224,7 @@ namespace Draw2d::Svg {
             };
             // viewBox width/height trumps current viewport width/height, even when supplied by user.
             svgParserContext.setViewportWidth(viewBox[2]);
-            svgParserContext.setViewportHeight(viewBox[2]);
+            svgParserContext.setViewportHeight(viewBox[3]);
         }
 
         __parsePreserveAspectRatio(pSvgElement,svgSvgParams.preserveAspectRatio,svgSvgParams.preserveAspectRatioMode);
@@ -256,6 +279,8 @@ namespace Draw2d::Svg {
             }
             else if(strName == GROUP_NAME || strName == PATH_NAME || strName == USE_NAME
                  || strName == RECT_NAME || strName == CIRCLE_NAME || strName == ELLIPSE_NAME
+                 || strName == POLYGON_NAME || strName == POLYLINE_NAME || strName == MASK_NAME
+                 || strName == CLIP_PATH_NAME
                  || strName == TEXT_NAME || strName == IMAGE_NAME || strName == IMAGE_ALTERNATE_NAME 
                  || strName == SVG_NAME) {
                 (void) __parseSvgEntity(svgParseState, pChildNode.get(), svgParserContext);
@@ -347,6 +372,18 @@ namespace Draw2d::Svg {
         {
             cpSvgEntity = __parseRect(svgParseState, pChildElement, svgParserContext);
         }
+        else if(strChildElementName == CLIP_PATH_NAME)
+        {
+            cpSvgEntity = __parseClipPath(svgParseState, pChildElement, svgParserContext);
+        }
+        else if(strChildElementName == MASK_NAME)
+        {
+            cpSvgEntity = __parseMask(svgParseState, pChildElement, svgParserContext);
+        }
+        else if(strChildElementName == POLYGON_NAME || strChildElementName == POLYLINE_NAME)
+        {
+            cpSvgEntity = __parsePolyPoints(svgParseState, pChildElement, svgParserContext, strChildElementName == POLYGON_NAME);
+        }
         else if(strChildElementName == ELLIPSE_NAME)
         {
             cpSvgEntity = __parseEllipse(svgParseState, pChildElement, svgParserContext);
@@ -372,20 +409,115 @@ namespace Draw2d::Svg {
         return cpSvgEntity;
     } // const SvgEntity *SvgParser::__parseSvgEntity(SvgParseState &, Xml::IDomEntity *)
 
-    template <typename F>
-    void SvgParser::__applyIfSet(Xml::IDomEntity *pElement, const Core::String &cstrAttributeName, F &&apply)
+    void SvgParser::__collectStyleSheets(SvgParseState &svgParseState, Xml::IDomEntity *pElement)
     {
-        Core::String strValue { };
-        if(!pElement->tryGetAttribute(cstrAttributeName,strValue)
-        || strValue == INHERIT_VALUE) return;
-        apply(strValue);
+        if(pElement->getTagName() == STYLE_NAME) {
+            svgParseState.styleSheet.append(pElement->getTextContent());
+            return;
+        }
+        for(std::unique_ptr<Xml::IDomEntity> pChild = pElement->getFirstChild(); pChild; pChild = pChild->getNextSibling()) {
+            __collectStyleSheets(svgParseState, pChild.get());
+        }
     }
 
-    void SvgParser::__updateInheritedProperties(SvgParseState &svgParseState, Xml::IDomEntity *pElement, SvgParserContext &svgParserContext)
+    DeclaredValues SvgParser::__declaredValues(SvgParseState &svgParseState, Xml::IDomEntity *pElement)
     {
+        // the presentation attributes the parser understands; transform stays an attribute
+        static const std::array<const Core::String *, 19> PresentationAttributes {
+            &COLOR_ATTRIBUTE, &FILL_ATTRIBUTE, &FILL_RULE_ATTRIBUTE, &FILL_OPACITY_ATTRIBUTE,
+            &STROKE_ATTRIBUTE, &STROKE_OPACITY_ATTRIBUTE, &STROKE_WIDTH_ATTRIBUTE, &STROKE_LINECAP_ATTRIBUTE,
+            &STROKE_LINEJOIN_ATTRIBUTE, &STROKE_MITRELIMIT_ATTRIBUTE, &STROKE_DASHARRAY_ATTRIBUTE,
+            &STROKE_DASHOFFSET_ATTRIBUTE, &OPACITY_ATTRIBUTE, &DISPLAY_ATTRIBUTE, &VISIBILITY_ATTRIBUTE,
+            &MASK_ATTRIBUTE, &MIX_BLEND_MODE_ATTRIBUTE, &ISOLATION_ATTRIBUTE, &CLIP_PATH_ATTRIBUTE
+        };
+        // the same names transcoded once for Xerces, rather than on every lookup
+        static const std::vector<Xml::String> XercesNames = [] {
+            std::vector<Xml::String> names {};
+            for(const Core::String *cpstrName : PresentationAttributes) names.emplace_back(cpstrName->c_str());
+            return names;
+        }();
+        DeclaredValues declaredValues { };
+        for(size_t nIndex = 0; nIndex < PresentationAttributes.size(); nIndex++) {
+            Core::String strValue { };
+            if(pElement->tryGetAttribute(XercesNames[nIndex], strValue)) declaredValues[*PresentationAttributes[nIndex]] = strValue.trim();
+        }
+
+        Core::String strStyle { };
+        (void) pElement->tryGetAttribute(STYLE_ATTRIBUTE, strStyle);
+        if(svgParseState.styleSheet.isEmpty() && Core::String::IsWhitespace(strStyle)) return declaredValues;
+
+        Core::String strId { };
+        (void) pElement->tryGetAttribute(ID_ATTRIBUTE, strId);
+        Core::String strClass { };
+        std::vector<Core::String> classes { };
+        if(pElement->tryGetAttribute(CLASS_ATTRIBUTE, strClass)) {
+            for(Core::String &strName : strClass.regex_split(Core::String::WsRegex)) {
+                if(!strName.empty()) classes.push_back(std::move(strName));
+            }
+        }
+        for(auto &[strProperty, strValue] : svgParseState.styleSheet.cascade(pElement->getTagName(), strId, classes, StyleSheet::ParseDeclarations(strStyle))) {
+            declaredValues[strProperty] = std::move(strValue);
+        }
+        return declaredValues;
+    }
+
+    template <typename F>
+    void SvgParser::__applyIfSet(const DeclaredValues &declaredValues, const Core::String &cstrPropertyName, F &&apply)
+    {
+        auto it = declaredValues.find(cstrPropertyName);
+        if(it == declaredValues.end() || it->second == INHERIT_VALUE) return;
+        apply(it->second);
+    }
+
+    float SvgParser::__parseLength(const Core::String &cstrLength, const SvgParserContext &svgParserContext)
+    {
+        const Core::String strLength = cstrLength.trim();
+        std::cmatch lengthMatch;
+        if(!std::regex_match(strLength.c_str(), lengthMatch, DimensionRegex)) throw SvgException("Invalid length `{}'", strLength.c_str());
+        const float fValue = Core::ParseFloat(lengthMatch[1].str());
+        Core::String strUnit = lengthMatch[2].str();
+        std::transform(strUnit.begin(), strUnit.end(), strUnit.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+        // CSS absolute units at 96px to the inch; font-relative ones against the 16px default
+        //  font size, since font-size isn't inherited yet
+        const float fWidth = svgParserContext.getViewportWidth();
+        const float fHeight = svgParserContext.getViewportHeight();
+        if(strUnit.empty() || strUnit == "px") return fValue;
+        if(strUnit == "in") return fValue * 96.0f;
+        if(strUnit == "pt") return fValue * 96.0f / 72.0f;
+        if(strUnit == "pc") return fValue * 16.0f;
+        if(strUnit == "cm") return fValue * 96.0f / 2.54f;
+        if(strUnit == "mm") return fValue * 96.0f / 25.4f;
+        if(strUnit == "q") return fValue * 96.0f / 101.6f;
+        if(strUnit == "em" || strUnit == "rem") return fValue * 16.0f;
+        if(strUnit == "ex" || strUnit == "ch") return fValue * 8.0f;
+        // a percentage of a length that isn't horizontal or vertical: of the viewport's
+        //  normalised diagonal (SVG 1.1 §7.10)
+        if(strUnit == "%") return fValue / 100.0f * std::sqrt((fWidth * fWidth + fHeight * fHeight) / 2.0f);
+        if(strUnit == "vw") return fValue / 100.0f * fWidth;
+        if(strUnit == "vh") return fValue / 100.0f * fHeight;
+        if(strUnit == "vmin") return fValue / 100.0f * std::min(fWidth, fHeight);
+        if(strUnit == "vmax") return fValue / 100.0f * std::max(fWidth, fHeight);
+        throw SvgException("Unsupported unit `{}' in length `{}'", strUnit.c_str(), strLength.c_str());
+    }
+
+    float SvgParser::__parseUnitInterval(const Core::String &cstrValue)
+    {
+        // a number or a percentage, clamped to 0-1 (opacities)
+        Core::String strValue = cstrValue.trim();
+        float fValue = 0.0f;
+        if(!strValue.empty() && strValue.back() == '%') fValue = Core::ParseFloat(Core::String(strValue.substr(0, strValue.size() - 1)).trim()) / 100.0f;
+        else fValue = Core::ParseFloat(strValue);
+        return std::clamp(fValue, 0.0f, 1.0f);
+    }
+
+    DeclaredValues SvgParser::__updateInheritedProperties(SvgParseState &svgParseState, Xml::IDomEntity *pElement, SvgParserContext &svgParserContext)
+    {
+        const DeclaredValues declaredValues = __declaredValues(svgParseState, pElement);
+
         // great suggestion from claude.  Most of these properties can take the value "inherit,"
         //  so we explicitly check for that and ignore any inherit values.  There are a few exceptions
-        __applyIfSet(pElement, COLOR_ATTRIBUTE, [&](auto s) {svgParserContext.setColour(__parseColour(svgParseState, s, svgParserContext)); });
+        __applyIfSet(declaredValues, COLOR_ATTRIBUTE, [&](auto s) {svgParserContext.setColour(__parseColour(svgParseState, s, svgParserContext)); });
 
         Core::String transformAttribute { };
         if (pElement->tryGetAttribute(TRANSFORM_ATTRIBUTE,transformAttribute)) {
@@ -394,48 +526,45 @@ namespace Draw2d::Svg {
             svgParserContext.multiplyRight(matrix);
         }
 
-        __applyIfSet(pElement, FILL_ATTRIBUTE, [&](auto s) {svgParserContext.setFillColour(__parsePaint(svgParseState, s, svgParserContext)); });
+        __applyIfSet(declaredValues, FILL_ATTRIBUTE, [&](auto s) {svgParserContext.setFillColour(__parsePaint(svgParseState, s, svgParserContext)); });
 
-        __applyIfSet(pElement, FILL_RULE_ATTRIBUTE, [&](auto s) { svgParserContext.setFillRule(ParseFillRule(s)); });
+        __applyIfSet(declaredValues, FILL_RULE_ATTRIBUTE, [&](auto s) { svgParserContext.setFillRule(ParseFillRule(s)); });
 
-        __applyIfSet(pElement, FILL_OPACITY_ATTRIBUTE, [&](auto s) { svgParserContext.setFillOpacity(Core::ParseFloat(s)); });
+        __applyIfSet(declaredValues, FILL_OPACITY_ATTRIBUTE, [&](auto s) { svgParserContext.setFillOpacity(__parseUnitInterval(s)); });
 
-        __applyIfSet(pElement, STROKE_ATTRIBUTE, [&](auto s) { svgParserContext.setStrokeColour(__parsePaint(svgParseState, s, svgParserContext)); });
+        __applyIfSet(declaredValues, STROKE_ATTRIBUTE, [&](auto s) { svgParserContext.setStrokeColour(__parsePaint(svgParseState, s, svgParserContext)); });
 
-        __applyIfSet(pElement, STROKE_OPACITY_ATTRIBUTE, [&](auto s) { svgParserContext.setStrokeOpacity(Core::ParseFloat(s)); });
+        __applyIfSet(declaredValues, STROKE_OPACITY_ATTRIBUTE, [&](auto s) { svgParserContext.setStrokeOpacity(__parseUnitInterval(s)); });
 
-        __applyIfSet(pElement, STROKE_WIDTH_ATTRIBUTE, [&](auto s) { svgParserContext.setStrokeWidth(Core::ParseFloat(s)); });
+        __applyIfSet(declaredValues, STROKE_WIDTH_ATTRIBUTE, [&](auto s) { svgParserContext.setStrokeWidth(__parseLength(s, svgParserContext)); });
 
-        __applyIfSet(pElement, STROKE_LINECAP_ATTRIBUTE, [&](auto s) { svgParserContext.setLineCap(ParseLineCap(s)); });
+        __applyIfSet(declaredValues, STROKE_LINECAP_ATTRIBUTE, [&](auto s) { svgParserContext.setLineCap(ParseLineCap(s)); });
 
-        __applyIfSet(pElement, STROKE_LINEJOIN_ATTRIBUTE, [&](auto s) { svgParserContext.setLineJoin(ParseLineJoin(s)); });
+        __applyIfSet(declaredValues, STROKE_LINEJOIN_ATTRIBUTE, [&](auto s) { svgParserContext.setLineJoin(ParseLineJoin(s)); });
 
-        __applyIfSet(pElement, STROKE_MITRELIMIT_ATTRIBUTE, [&](auto s) { svgParserContext.setStrokeMiterLimit(Core::ParseFloat(s)); });
+        __applyIfSet(declaredValues, STROKE_MITRELIMIT_ATTRIBUTE, [&](auto s) { svgParserContext.setStrokeMiterLimit(Core::ParseFloat(s)); });
 
-        // dash array is a list of numbers that controls when the dash is on and off
-        std::vector<float> dashArray {};
-        Core::String strStrokeDashArray { };
-        if(pElement->tryGetAttribute(STROKE_DASHARRAY_ATTRIBUTE, strStrokeDashArray)
-        && strStrokeDashArray != INHERIT_VALUE) {
-            // subtle - none should set an empty array.
-            if(strStrokeDashArray != NONE_VALUE) {
-                std::regex delimiter("\\s+");
-                
-                // The -1 argument tells the iterator to extract everything EXCEPT the pattern
-                std::sregex_token_iterator iter(strStrokeDashArray.begin(), strStrokeDashArray.end(), delimiter, -1);
+        // dash array is a list of lengths, separated by commas and/or whitespace, that controls
+        //  when the dash is on and off; "none" sets an empty array
+        __applyIfSet(declaredValues, STROKE_DASHARRAY_ATTRIBUTE, [&](const Core::String &s) {
+            std::vector<float> dashArray {};
+            if(s != NONE_VALUE) {
+                static const std::regex Delimiter("[\\s,]+");
+                std::sregex_token_iterator iter(s.begin(), s.end(), Delimiter, -1);
                 std::sregex_token_iterator end;
-                
-                std::vector<std::string> tokens(iter, end);
-                std::erase_if(tokens,[](std::string &value) { return !value.length(); });
-                std::transform(tokens.begin(), tokens.end(), std::back_inserter(dashArray), [](const std::string &cstrValue) { return Core::ParseFloat(cstrValue); });
+                for(; iter != end; ++iter) {
+                    if(iter->length()) dashArray.push_back(__parseLength(iter->str(), svgParserContext));
+                }
             }
             svgParserContext.setDashArray(dashArray);
-        }
+        });
 
-        __applyIfSet(pElement, STROKE_DASHOFFSET_ATTRIBUTE, [&](auto s) { svgParserContext.setDashOffset(Core::ParseFloat(s)); });
+        __applyIfSet(declaredValues, STROKE_DASHOFFSET_ATTRIBUTE, [&](auto s) { svgParserContext.setDashOffset(__parseLength(s, svgParserContext)); });
+
+        return declaredValues;
     }
 
-    void SvgParser::__parseCommonProperties(SvgParseState &svgParseState, Xml::IDomEntity *pRenderedElement, SvgEntityParams &params, const SvgParserContext &svgParserContext)
+    void SvgParser::__parseCommonProperties(SvgParseState &svgParseState, Xml::IDomEntity *pRenderedElement, SvgEntityParams &params, const SvgParserContext &svgParserContext, const DeclaredValues &declaredValues)
     {
         Core::String strId { };
         (void) pRenderedElement->tryGetAttribute(ID_ATTRIBUTE,strId);
@@ -443,53 +572,44 @@ namespace Draw2d::Svg {
 
         params.render = svgParserContext.getRender();
 
-        if(pRenderedElement->hasAttribute(TRANSFORM_ATTRIBUTE)) {
-            params.matrix = duplicateMatrix6(svgParserContext.getMatrix());
+        // only the element's own transform: SvgRenderer already composes the parents' transforms
+        //  on its way down the tree, so storing the accumulated matrix applied them twice.
+        Core::String strTransform { };
+        if(pRenderedElement->tryGetAttribute(TRANSFORM_ATTRIBUTE, strTransform)) {
+            params.matrix = __parseTransform(strTransform, TRANSFORM_ATTRIBUTE);
         }
 
-        if(pRenderedElement->hasAttribute(FILL_ATTRIBUTE)) {
-            params.fillColour = svgParserContext.getFillColour();
-        }
+        // the computed values -- set on the element itself or inherited -- so the renderer
+        //  needn't walk back up the tree
+        params.fillColour = svgParserContext.getFillColour();
+        params.fillRule = svgParserContext.getFillRule();
+        params.fillOpacity = svgParserContext.getFillOpacity();
+        params.strokeColour = svgParserContext.getStrokeColour();
+        params.strokeOpacity = svgParserContext.getStrokeOpacity();
+        params.strokeWidth = svgParserContext.getStrokeWidth();
+        params.lineCap = svgParserContext.getLineCap();
+        params.lineJoin = svgParserContext.getLineJoin();
+        params.miterLimit = svgParserContext.getStrokeMiterLimit();
+        params.dashArray = svgParserContext.getDashArray();
+        params.dashOffset = svgParserContext.getDashOffset();
 
-        if(pRenderedElement->hasAttribute(FILL_RULE_ATTRIBUTE)) {
-            params.fillRule = svgParserContext.getFillRule();
-        }
-
-        if(pRenderedElement->hasAttribute(FILL_OPACITY_ATTRIBUTE)) {
-            params.fillOpacity = svgParserContext.getFillOpacity();
-        }
-
-        if(pRenderedElement->hasAttribute(STROKE_ATTRIBUTE)) {
-            params.strokeColour = svgParserContext.getStrokeColour();
-        }
-
-        if(pRenderedElement->hasAttribute(STROKE_OPACITY_ATTRIBUTE)) {
-            params.strokeOpacity = svgParserContext.getStrokeOpacity();
-        }
-
-        if(pRenderedElement->hasAttribute(STROKE_WIDTH_ATTRIBUTE)) {
-            params.strokeWidth = svgParserContext.getStrokeWidth();
-        }
-
-        if(pRenderedElement->hasAttribute(STROKE_LINECAP_ATTRIBUTE)) {
-            params.lineCap = svgParserContext.getLineCap();
-        }
-
-        if(pRenderedElement->hasAttribute(STROKE_LINEJOIN_ATTRIBUTE)) {
-            params.lineJoin = svgParserContext.getLineJoin();
-        }
-
-        if(pRenderedElement->hasAttribute(STROKE_MITRELIMIT_ATTRIBUTE)) {
-            params.miterLimit = svgParserContext.getStrokeMiterLimit();
-        }
-
-        if(pRenderedElement->hasAttribute(STROKE_DASHARRAY_ATTRIBUTE)) {
-            params.dashArray = svgParserContext.getDashArray();
-        }
-
-        if(pRenderedElement->hasAttribute(STROKE_DASHOFFSET_ATTRIBUTE)) {
-            params.dashOffset = svgParserContext.getDashOffset();
-        }
+        // not inherited, so straight from this element's own declared values
+        __applyIfSet(declaredValues, OPACITY_ATTRIBUTE, [&](auto s) { params.opacity = __parseUnitInterval(s); });
+        __applyIfSet(declaredValues, MASK_ATTRIBUTE, [&](const Core::String &s) {
+            std::cmatch urlMatch;
+            if(std::regex_search(s.c_str(), urlMatch, UrlRegex)) params.maskId = Core::String(urlMatch[1].str()).trim();
+            else if(s != NONE_VALUE && m_callback) m_callback(SvgParserStatus::Warning, std::format("Unsupported mask `{}'; only url(#id) is", s.c_str()));
+        });
+        __applyIfSet(declaredValues, CLIP_PATH_ATTRIBUTE, [&](const Core::String &s) {
+            std::cmatch urlMatch;
+            if(std::regex_search(s.c_str(), urlMatch, UrlRegex)) params.clipPathId = Core::String(urlMatch[1].str()).trim();
+            else if(s != NONE_VALUE && m_callback) m_callback(SvgParserStatus::Warning, std::format("Unsupported clip-path `{}'; only url(#id) is", s.c_str()));
+        });
+        __applyIfSet(declaredValues, MIX_BLEND_MODE_ATTRIBUTE, [&](const Core::String &s) {
+            if(std::optional<BlendMode> blendMode = ChercherBlendMode(s)) params.blendMode = blendMode.value();
+            else if(m_callback) m_callback(SvgParserStatus::Warning, std::format("Unrecognized mix-blend-mode `{}'; using normal", s.c_str()));
+        });
+        __applyIfSet(declaredValues, ISOLATION_ATTRIBUTE, [&](const Core::String &s) { params.bIsolate = s == "isolate"; });
 
         Core::String strClass { };
         pRenderedElement->tryGetAttribute(CLASS_ATTRIBUTE, strClass);
@@ -511,15 +631,10 @@ namespace Draw2d::Svg {
     {
         SvgGroupParams svgGroupParams { SvgContainerParams { SvgEntityParams { .svgDocument = svgParseState.svgDocument } } };
 
-        __updateInheritedProperties(svgParseState, pGroupElement, svgParserContext);
-        __parseCommonProperties(svgParseState, pGroupElement, svgGroupParams, svgParserContext);
+        const DeclaredValues declaredValues = __updateInheritedProperties(svgParseState, pGroupElement, svgParserContext);
+        __parseCommonProperties(svgParseState, pGroupElement, svgGroupParams, svgParserContext, declaredValues);
 
         std::vector<const SvgEntity *> svgEntities { };
-        float fOpacity = 1.0f;
-        Core::String strOpacityAttribute { };
-        if (pGroupElement->tryGetAttribute(OPACITY_ATTRIBUTE, strOpacityAttribute)) fOpacity = Core::ParseFloat(strOpacityAttribute);
-
-        svgGroupParams.fOpacity = fOpacity;
         std::unique_ptr<Group> pGroup = std::make_unique<Group>(std::move(svgGroupParams));
         Group *toReturn = svgParserContext.getChildWrangler()->addChildAs(std::move(pGroup));
         __saveEntityToDocument(svgParseState, toReturn);
@@ -551,14 +666,85 @@ namespace Draw2d::Svg {
         return toReturn;
     } // const Group *SvgParser::__parseGroup(DOMDocument *, DOMElement *)
 
+    const Mask *SvgParser::__parseMask(SvgParseState &svgParseState, Xml::IDomEntity *pMaskElement, SvgParserContext svgParserContext)
+    {
+        SvgMaskParams svgMaskParams { SvgContainerParams { SvgEntityParams { .svgDocument = svgParseState.svgDocument } } };
+
+        // a mask is only ever drawn through the elements that reference it; SvgRenderer skips
+        //  Mask entities met on their own
+        const DeclaredValues declaredValues = __updateInheritedProperties(svgParseState, pMaskElement, svgParserContext);
+        __parseCommonProperties(svgParseState, pMaskElement, svgMaskParams, svgParserContext, declaredValues);
+
+        auto [ x, y, width, height ] = __parseDimensions(svgParseState, pMaskElement);
+        svgMaskParams.x = x;
+        svgMaskParams.y = y;
+        svgMaskParams.width = width;
+        svgMaskParams.height = height;
+        Core::String strUnits { };
+        if(pMaskElement->tryGetAttribute(MASKUNITS_ATTRIBUTE, strUnits)) svgMaskParams.maskUnits = (GradientUnits)ParseGradientUnits(strUnits);
+        strUnits = { };
+        if(pMaskElement->tryGetAttribute(MASKCONTENTUNITS_ATTRIBUTE, strUnits)) svgMaskParams.maskContentUnits = (GradientUnits)ParseGradientUnits(strUnits);
+
+        std::unique_ptr<Mask> pMask = std::make_unique<Mask>(std::move(svgMaskParams));
+        Mask *toReturn = svgParserContext.getChildWrangler()->addChildAs(std::move(pMask));
+        __saveEntityToDocument(svgParseState, toReturn);
+        svgParserContext.setChildWrangler(toReturn);
+
+        const Core::String &cstrId = toReturn->getId();
+        std::optional<Core::ScopeExit> scopeGuard;
+        if(!Core::String::IsWhitespace(cstrId)) {
+            auto [ it, bInserted ] = svgParseState.useReferences.insert(cstrId);
+            if(!bInserted) throw SvgException("Found circular reference in use {}; all references in the chain {}", cstrId, Core::String::Join(svgParseState.useReferences, ", "));
+            scopeGuard.emplace([&svgParseState,&cstrId](){
+                svgParseState.useReferences.erase(cstrId);
+            });
+        }
+
+        for(std::unique_ptr<Xml::IDomEntity> pChildNode = pMaskElement->getFirstChild(); pChildNode; pChildNode = pChildNode->getNextSibling()) {
+            (void) __parseSvgEntity(svgParseState, pChildNode.get(), svgParserContext);
+        }
+        return toReturn;
+    }
+
+    const ClipPath *SvgParser::__parseClipPath(SvgParseState &svgParseState, Xml::IDomEntity *pClipPathElement, SvgParserContext svgParserContext)
+    {
+        SvgClipPathParams svgClipPathParams { SvgContainerParams { SvgEntityParams { .svgDocument = svgParseState.svgDocument } } };
+
+        // like a mask, only ever applied through the elements that reference it
+        const DeclaredValues declaredValues = __updateInheritedProperties(svgParseState, pClipPathElement, svgParserContext);
+        __parseCommonProperties(svgParseState, pClipPathElement, svgClipPathParams, svgParserContext, declaredValues);
+        Core::String strUnits { };
+        if(pClipPathElement->tryGetAttribute(CLIPPATHUNITS_ATTRIBUTE, strUnits)) svgClipPathParams.clipPathUnits = (GradientUnits)ParseGradientUnits(strUnits);
+
+        std::unique_ptr<ClipPath> pClipPath = std::make_unique<ClipPath>(std::move(svgClipPathParams));
+        ClipPath *toReturn = svgParserContext.getChildWrangler()->addChildAs(std::move(pClipPath));
+        __saveEntityToDocument(svgParseState, toReturn);
+        svgParserContext.setChildWrangler(toReturn);
+
+        const Core::String &cstrId = toReturn->getId();
+        std::optional<Core::ScopeExit> scopeGuard;
+        if(!Core::String::IsWhitespace(cstrId)) {
+            auto [ it, bInserted ] = svgParseState.useReferences.insert(cstrId);
+            if(!bInserted) throw SvgException("Found circular reference in use {}; all references in the chain {}", cstrId, Core::String::Join(svgParseState.useReferences, ", "));
+            scopeGuard.emplace([&svgParseState,&cstrId](){
+                svgParseState.useReferences.erase(cstrId);
+            });
+        }
+
+        for(std::unique_ptr<Xml::IDomEntity> pChildNode = pClipPathElement->getFirstChild(); pChildNode; pChildNode = pChildNode->getNextSibling()) {
+            (void) __parseSvgEntity(svgParseState, pChildNode.get(), svgParserContext);
+        }
+        return toReturn;
+    }
+
     const Path *SvgParser::__parsePath(SvgParseState &svgParseState, Xml::IDomEntity *pPathElement, const SvgParserContext &svgParserContextIn)
     {
         SvgParserContext svgParserContext = svgParserContextIn;
 
         SvgPathParams svgPathParams { SvgEntityParams { .svgDocument = svgParseState.svgDocument } };
 
-        __updateInheritedProperties(svgParseState, pPathElement, svgParserContext);
-        __parseCommonProperties(svgParseState, pPathElement, svgPathParams, svgParserContext);
+        const DeclaredValues declaredValues = __updateInheritedProperties(svgParseState, pPathElement, svgParserContext);
+        __parseCommonProperties(svgParseState, pPathElement, svgPathParams, svgParserContext, declaredValues);
 
         Core::String strD { };
         if (!pPathElement->tryGetAttribute(D_ATTRIBUTE,strD)) throw SvgException("Missing d attribute on pathNode");
@@ -576,6 +762,55 @@ namespace Draw2d::Svg {
         return toReturn;
     } // const Path *SvgParser::__parsePath(DOMDocument *, DOMElement *)
 
+    const Path *SvgParser::__parsePolyPoints(SvgParseState &svgParseState, Xml::IDomEntity *pElement, SvgParserContext svgParserContext, bool bClosed)
+    {
+        SvgPathParams svgPathParams { SvgEntityParams { .svgDocument = svgParseState.svgDocument } };
+
+        const DeclaredValues declaredValues = __updateInheritedProperties(svgParseState, pElement, svgParserContext);
+        __parseCommonProperties(svgParseState, pElement, svgPathParams, svgParserContext, declaredValues);
+
+        // numbers separated by whitespace and/or a comma; anything else is an error, and as
+        //  the spec asks, the points before it are still drawn
+        Core::String strPoints { };
+        (void) pElement->tryGetAttribute(POINTS_ATTRIBUTE, strPoints);
+        std::vector<float> coordinates { };
+        size_t nPos = 0;
+        while(nPos < strPoints.size()) {
+            const unsigned char c = strPoints[nPos];
+            if(std::isspace(c) || c == ',') {
+                nPos++;
+                continue;
+            }
+            std::cmatch numberMatch;
+            if(!std::regex_search(strPoints.c_str() + nPos, numberMatch, NumberRegex, std::regex_constants::match_continuous)) {
+                if(m_callback) m_callback(SvgParserStatus::Warning, std::format("Invalid points `{}' at {}; drawing the points before it", strPoints.c_str(), nPos));
+                break;
+            }
+            coordinates.push_back(Core::ParseFloat(numberMatch[0].str()));
+            nPos += numberMatch[0].length();
+        }
+        // an odd coordinate out is dropped (SVG 2: draw up to the last complete pair)
+        if(coordinates.size() % 2) {
+            if(m_callback) m_callback(SvgParserStatus::Warning, std::format("Odd number of coordinates in points `{}'; ignoring the last", strPoints.c_str()));
+            coordinates.pop_back();
+        }
+
+        // M p0 L p1 ... [Z]; fewer than two points draws nothing
+        if(coordinates.size() >= 4) {
+            svgPathParams.pathMoves.push_back(PathMove::MoveTo);
+            for(size_t n = 2; n < coordinates.size(); n += 2) svgPathParams.pathMoves.push_back(PathMove::LineTo);
+            if(bClosed) svgPathParams.pathMoves.push_back(PathMove::ClosePath);
+            svgPathParams.points = std::move(coordinates);
+        }
+
+        std::unique_ptr<Path> pPath = bClosed
+            ? std::unique_ptr<Path>(std::make_unique<Polygon>(std::move(svgPathParams)))
+            : std::unique_ptr<Path>(std::make_unique<Polyline>(std::move(svgPathParams)));
+        Path *toReturn = svgParserContext.getChildWrangler()->addChildAs(std::move(pPath));
+        __saveEntityToDocument(svgParseState, toReturn);
+        return toReturn;
+    }
+
     const Use *SvgParser::__parseUse(SvgParseState &svgParseState, Xml::IDomEntity *pUseElement, SvgParserContext svgParserContext)
     {
         SvgUseParams svgUseParams { SvgContainerParams { SvgEntityParams { .svgDocument = svgParseState.svgDocument } } };
@@ -583,8 +818,8 @@ namespace Draw2d::Svg {
         // when we encounter use, we create the use node itself, set the child wrangler to
         //  it and instance it as we go, being mindful to check for circular references
         //  in the expansion
-        __updateInheritedProperties(svgParseState, pUseElement, svgParserContext);
-        __parseCommonProperties(svgParseState, pUseElement, svgUseParams, svgParserContext);
+        const DeclaredValues declaredValues = __updateInheritedProperties(svgParseState, pUseElement, svgParserContext);
+        __parseCommonProperties(svgParseState, pUseElement, svgUseParams, svgParserContext, declaredValues);
 
         Core::String strHref = __retrieveHref(svgParseState, pUseElement);
         if (Core::String::IsWhitespace(strHref)) throw SvgException("Use node has no xlink:href attribute");
@@ -633,8 +868,8 @@ namespace Draw2d::Svg {
     {
         SvgRectParams svgRectParams { SvgEntityParams { .svgDocument = svgParseState.svgDocument } };
 
-        __updateInheritedProperties(svgParseState, pRectElement, svgParserContext);
-        __parseCommonProperties(svgParseState, pRectElement, svgRectParams, svgParserContext);
+        const DeclaredValues declaredValues = __updateInheritedProperties(svgParseState, pRectElement, svgParserContext);
+        __parseCommonProperties(svgParseState, pRectElement, svgRectParams, svgParserContext, declaredValues);
 
         auto [ x, y, width, height ] = __parseDimensions(svgParseState, pRectElement);
 
@@ -663,8 +898,8 @@ namespace Draw2d::Svg {
         svgEllipseParams.ry = __parseDimension(pEllipseElement, RY_ATTRIBUTE);
         svgEllipseParams.svgPathLengthableParams = __checkPathLengthable(svgParseState, pEllipseElement,svgParserContext);
 
-        __updateInheritedProperties(svgParseState, pEllipseElement, svgParserContext);
-        __parseCommonProperties(svgParseState, pEllipseElement, svgEllipseParams, svgParserContext);
+        const DeclaredValues declaredValues = __updateInheritedProperties(svgParseState, pEllipseElement, svgParserContext);
+        __parseCommonProperties(svgParseState, pEllipseElement, svgEllipseParams, svgParserContext, declaredValues);
 
         std::unique_ptr<Ellipse> pEllipse = std::make_unique<Ellipse>(std::move(svgEllipseParams));
         Ellipse *toReturn = svgParserContext.getChildWrangler()->addChildAs(std::move(pEllipse));
@@ -680,8 +915,8 @@ namespace Draw2d::Svg {
         svgCircleParams.r = __parseDimension(pCircleElement, R_ATTRIBUTE);
         svgCircleParams.svgPathLengthableParams = __checkPathLengthable(svgParseState, pCircleElement,svgParserContext);
 
-        __updateInheritedProperties(svgParseState, pCircleElement, svgParserContext);
-        __parseCommonProperties(svgParseState, pCircleElement, svgCircleParams, svgParserContext);
+        const DeclaredValues declaredValues = __updateInheritedProperties(svgParseState, pCircleElement, svgParserContext);
+        __parseCommonProperties(svgParseState, pCircleElement, svgCircleParams, svgParserContext, declaredValues);
 
         std::unique_ptr<Circle> pCircle = std::make_unique<Circle>(std::move(svgCircleParams));
         Circle *toReturn = svgParserContext.getChildWrangler()->addChildAs(std::move(pCircle));
@@ -693,8 +928,8 @@ namespace Draw2d::Svg {
     {
         SvgImageParams svgImageParams { SvgEntityParams { .svgDocument = svgParseState.svgDocument } };
 
-        __updateInheritedProperties(svgParseState, pImageElement, svgParserContext);
-        __parseCommonProperties(svgParseState, pImageElement, svgImageParams, svgParserContext);
+        const DeclaredValues declaredValues = __updateInheritedProperties(svgParseState, pImageElement, svgParserContext);
+        __parseCommonProperties(svgParseState, pImageElement, svgImageParams, svgParserContext, declaredValues);
 
         auto [ x, y, width, height ] = __parseDimensions(svgParseState, pImageElement);
 
@@ -763,42 +998,88 @@ namespace Draw2d::Svg {
     {
         SvgTextParams svgTextParams { SvgEntityParams { .svgDocument = svgParseState.svgDocument } };
 
-        __updateInheritedProperties(svgParseState, pTextElement, svgParserContext);
-        __parseCommonProperties(svgParseState, pTextElement, svgTextParams, svgParserContext);
+        const DeclaredValues declaredValues = __updateInheritedProperties(svgParseState, pTextElement, svgParserContext);
+        __parseCommonProperties(svgParseState, pTextElement, svgTextParams, svgParserContext, declaredValues);
 
+        __parseCommonTextProperties(svgTextParams,pTextElement);
+
+        Core::String strFontSize { };
+        if (pTextElement->tryGetAttribute(FONTSIZE_ATTRIBUTE,strFontSize)) {
+            strFontSize.trim_in_place();
+            try {
+                auto result = Core::ParseFloatPrefix(strFontSize);
+                if(result.first < 0) throw SvgException("Font Size can't be negative!");
+                svgTextParams.fontSize = result.first;
+                unsigned nCount = result.second;
+                if(nCount != strFontSize.size()) {
+                    svgTextParams.fontSizeUnits = ChercherDimensionUnits(strFontSize.c_str() + nCount);
+                }
+            }
+            catch(std::exception &e) {
+                // could be the float doesn't parse, let's handle it gracefully.
+                if(m_callback) m_callback(SvgParserStatus::Warning, std::format("Error parsing font size {}", e.what()));
+            }
+        }
+
+        Core::String strFontFamily { };
+        if (pTextElement->tryGetAttribute(FONTFAMILY_ATTRIBUTE,strFontFamily)) {
+            svgTextParams.fontFamily = strFontFamily;
+        }
+
+        Core::String strFontStyle { };
+        if (pTextElement->tryGetAttribute(FONTSTYLE_ATTRIBUTE,strFontStyle)) {
+            svgTextParams.fontStyle = ChercherFontStyle(strFontStyle);
+        }
+
+        Core::String strTextAnchor { };
+        if (pTextElement->tryGetAttribute(TEXTANCHOR_ATTRIBUTE,strTextAnchor)) {
+            svgTextParams.textAnchor = ChercherTextAnchor(strTextAnchor);
+        }
+
+        svgTextParams.rawText = __parseRawText(pTextElement);
+
+        std::unique_ptr<Text> pText = std::make_unique<Text>(std::move(svgTextParams));
+        Text *toReturn = svgParserContext.getChildWrangler()->addChildAs(std::move(pText));
+        __saveEntityToDocument(svgParseState, toReturn);
+
+        return toReturn;
+    }
+
+    void SvgParser::__parseCommonTextProperties(SvgTSpanParams &svgTSpanParams, Xml::IDomEntity *pTextElement)
+    {
         Core::String strX { };
         size_t nPosition = 0;
         if (pTextElement->tryGetAttribute(X_ATTRIBUTE,strX)) {
-            svgTextParams.x = __parsePoints(strX, nPosition, 0, false, true);
+            svgTSpanParams.x = __parsePoints(strX, nPosition, 0, false, true);
         }
 
         Core::String strY { };
         nPosition = 0;
         if (pTextElement->tryGetAttribute(Y_ATTRIBUTE,strY)) {
-            svgTextParams.y = __parsePoints(strY, nPosition, 0, false, true);
+            svgTSpanParams.y = __parsePoints(strY, nPosition, 0, false, true);
         }
 
         Core::String strDx { };
         nPosition = 0;
         if (pTextElement->tryGetAttribute(DX_ATTRIBUTE,strDx)) {
-            svgTextParams.dx = __parsePoints(strDx, nPosition, 0, false, true);
+            svgTSpanParams.dx = __parsePoints(strDx, nPosition, 0, false, true);
         }
 
         Core::String strDy { };
         nPosition = 0;
         if (pTextElement->tryGetAttribute(DY_ATTRIBUTE,strDy)) {
-            svgTextParams.dy = __parsePoints(strDy, nPosition, 0, false, true);
+            svgTSpanParams.dy = __parsePoints(strDy, nPosition, 0, false, true);
         }
 
         Core::String strRotate { };
         nPosition = 0;
         if (pTextElement->tryGetAttribute(ROTATE_ATTRIBUTE,strRotate)) {
-            svgTextParams.rotate = __parsePoints(strRotate, nPosition, 0, false, true);
+            svgTSpanParams.rotate = __parsePoints(strRotate, nPosition, 0, false, true);
         }
 
         Core::String strLengthAdjust { };
         if (pTextElement->tryGetAttribute(LENGTHADJUST_ATTRIBUTE,strLengthAdjust)) {
-            svgTextParams.lengthAdjust = ParseLengthAdjust(strLengthAdjust);
+            svgTSpanParams.lengthAdjust = ParseLengthAdjust(strLengthAdjust);
         }
 
         Core::String strTextLength { };
@@ -810,7 +1091,7 @@ namespace Draw2d::Svg {
 
             if (rit != strTextLength.rend() && *rit == '%')
             {
-                svgTextParams.textLengthPercentage = true;
+                svgTSpanParams.textLengthPercentage = true;
                 ++rit;
                 // Skip any whitespace between the number and the '%' too, e.g. "50   %"
                 while (rit != strTextLength.rend() && std::isspace(static_cast<unsigned char>(*rit)))
@@ -818,13 +1099,35 @@ namespace Draw2d::Svg {
             }
 
             strTextLength.erase(rit.base(), strTextLength.end());
-            svgTextParams.textLength = ParseFloat(strTextLength);
+            svgTSpanParams.textLength = ParseFloat(strTextLength);
+        }
+    }
+
+
+    RawText SvgParser::__parseRawText(Xml::IDomEntity *pTextElement)
+    {
+        RawTextParams rawTextParams;
+        std::unique_ptr<Xml::IDomEntity> pChild = pTextElement->getFirstChild(false);
+        while(pChild) {
+            if(pChild->getDomEntityType() == Xml::DomEntityType::Text) rawTextParams.texts.push_back(pChild->getTextContent());
+            else rawTextParams.texts.push_back(__parseTSpan(pChild.get()));
+            pChild = pChild->getNextSibling(false);
         }
 
-        std::unique_ptr<Text> pText = std::make_unique<Text>(std::move(svgTextParams));
-        Text *toReturn = svgParserContext.getChildWrangler()->addChildAs(std::move(pText));
-        __saveEntityToDocument(svgParseState, toReturn);
-        return toReturn;
+        RawText rawText { std::move(rawTextParams) };
+        return rawText;
+    }
+
+    std::unique_ptr<TSpan> SvgParser::__parseTSpan(Xml::IDomEntity *pTextElement)
+    {
+        SvgTSpanParams svgTSpanParams {};
+
+        __parseCommonTextProperties(svgTSpanParams,pTextElement);
+        svgTSpanParams.rawText = __parseRawText(pTextElement);
+
+        std::unique_ptr<TSpan> pTSpan = std::make_unique<TSpan>(std::move(svgTSpanParams));
+
+        return pTSpan;
     }
 
     Core::String SvgParser::__retrieveHref(SvgParseState &svgParseState, Xml::IDomEntity *pElement)
@@ -895,7 +1198,14 @@ namespace Draw2d::Svg {
         std::cmatch urlMatch;
         if (std::regex_search(strColour.c_str(), urlMatch, UrlRegex))
         {
-            return SvgPaint(SvgColourType::Gradient, urlMatch[1].str());
+            SvgPaint svgPaint(SvgColourType::Gradient, urlMatch[1].str());
+            // url(#id) may be followed by a fallback, used when the reference doesn't resolve
+            const Core::String strFallback = Core::String(urlMatch.suffix().str()).trim();
+            if(!Core::String::IsEmpty(strFallback)) {
+                if(strFallback == NONE_VALUE) svgPaint.setFallback(SvgColour { SvgColourType::None });
+                else svgPaint.setFallback(__parseColour(svgParseState, strFallback, svgParserContext));
+            }
+            return svgPaint;
         }
         if(strColour.c_str() == NONE_VALUE) {
             return SvgPaint(SvgColourType::None);
@@ -942,31 +1252,24 @@ namespace Draw2d::Svg {
             Core::String strAlpha = svgRgbMatch[5].str();
             Core::String strAlphaPercent = svgRgbMatch[6].str();
 
-            // endless pita with svg.  seems handy, though.
-            std::array<uint8_t,4> pBgra { };
-            unsigned nSize = 3;
-            if(!Core::String::IsEmpty(strAlpha)) nSize = 4;
+            // channels 0-255 or 0%-100%, alpha 0-1 or 0%-100%, all clamped as in CSS; worked out
+            //  in floats, since an alpha of 0.5 doesn't survive a uint8_t.
+            const bool bPercent = !Core::String::IsWhitespace(strRgbPercent.c_str());
+            auto channel = [bPercent](const Core::String &cstrValue) -> uint8_t {
+                float fValue = Core::ParseFloat(cstrValue);
+                if(bPercent) fValue = fValue / 100.0f * 255.0f;
+                return static_cast<uint8_t>(std::lround(std::clamp(fValue, 0.0f, 255.0f)));
+            };
 
-            pBgra[0] = Core::ParseFloat(strBlue.c_str());
-            pBgra[1] = Core::ParseFloat(strGreen.c_str());
-            pBgra[2] = Core::ParseFloat(strRed.c_str());
-            if(nSize == 4) {
-                pBgra[3] = Core::ParseFloat(strAlpha.c_str());
-                if(!Core::String::IsEmpty(strAlphaPercent)) {
-                    pBgra[3] = static_cast<uint8_t>(pBgra[3] / 100.0f * 255.0);
-                }
+            // stored as B, G, R, A
+            std::array<uint8_t,4> pBgra { channel(strBlue), channel(strGreen), channel(strRed), 0xff };
+            const bool bAlpha = !Core::String::IsEmpty(strAlpha);
+            if(bAlpha) {
+                float fAlpha = Core::ParseFloat(strAlpha);
+                if(!Core::String::IsEmpty(strAlphaPercent)) fAlpha /= 100.0f;
+                pBgra[3] = static_cast<uint8_t>(std::lround(std::clamp(fAlpha, 0.0f, 1.0f) * 255.0f));
             }
-            else pBgra[3] = 0xff;
-
-            if (!Core::String::IsWhitespace(strRgbPercent.c_str()))
-            {
-                // rgb given in percentage:
-                // make sure the values are clamped 0-100
-                for(unsigned index = 0; index < nSize; index++) if (pBgra[index] > 100) throw SvgException("Invalid pBgra value ({} {}, {}, {}",strColour.c_str(), pBgra[0], pBgra[1], pBgra[2]);
-                // convert to 0-255 byte value
-                for(unsigned index = 0; index < nSize; index++) pBgra[index] = static_cast<uint8_t>(pBgra[index]/100.0f* 255);
-            }
-            return SvgColour(nSize == 4 ? SvgColourType::BgrA : SvgColourType::Bgr, -1, std::move(pBgra));
+            return SvgColour(bAlpha ? SvgColourType::BgrA : SvgColourType::Bgr, -1, std::move(pBgra));
         }
 
         // check for hsla
@@ -976,58 +1279,32 @@ namespace Draw2d::Svg {
             Core::String strHue =               svgHslMatch[1].str();
             Core::String strHueUnits =          svgHslMatch[2].str();
             Core::String strSaturation =        svgHslMatch[3].str();
-            Core::String strSaturationPercent = svgHslMatch[4].str();
             Core::String strLightness =         svgHslMatch[5].str();
-            Core::String strLightnessPercent =  svgHslMatch[6].str();
             Core::String strAlpha =             svgHslMatch[7].str();
             Core::String strAlphaPercent =      svgHslMatch[8].str();
 
-            // endless pita with svg.  seems handy, though.
-            std::array<uint8_t,4> pHsla = { };
-            unsigned nSize = 3;
-            // NOTE - per the spec, the "a" is optional.  They can either provide an alpha or not with
-            //  either hsl or hsla.  svgs are so loosey-goosey and munged up with css :-/
-            if(strAlpha.length()) nSize = 4;
-            pHsla[0] = Core::ParseFloat(strHue);
-            pHsla[1] = Core::ParseFloat(strSaturation);
-            // clamp saturation per spec
-            if(strSaturationPercent.length()) {
-                pHsla[1] = std::clamp<float>(pHsla[1], 0.0f, 100.0f);
-                pHsla[1] /= 100.0f;
-            }
-            else {
-                pHsla[1] = std::clamp<float>(pHsla[1], 0.0f, 1.0f);
-                if(pHsla[1] < 0) pHsla[1] = 0;
-                if(pHsla[1] > 100) pHsla[1] = 100;
-            }
-            pHsla[2] = Core::ParseFloat(strLightness);
-            // clamp lightness per spec
-            if(strSaturationPercent.length()) {
-                pHsla[2] = std::clamp<float>(pHsla[2], 0.0f, 200.0f);
-                pHsla[2] /= 200.0f;
-            }
-            else pHsla[2] = std::clamp<float>(pHsla[2], 0.0f, 2.0f);
+            // hue in degrees, saturation and lightness scaled to 0-1: what hslaToRgba and the
+            //  colour resolvers expect.
+            float fHue = Core::ParseFloat(strHue);
+            if(strHueUnits == GRADIANS_UNIT) fHue *= 360.0f / 400.0f;
+            else if(strHueUnits == RADIANS_UNIT) fHue *= 180.0f / std::numbers::pi_v<float>;
+            else if(strHueUnits == TURN_UNIT) fHue *= 360.0f;
+            else if(strHueUnits.length() && strHueUnits != DEGREES_UNIT) throw SvgException("Unrecognized units on hue in hsl(a) value {}: {}", strColour.c_str(), strHueUnits.c_str());
 
-            if(nSize == 4) {
-                pHsla[3] = Core::ParseFloat(svgHslMatch[7].str());
-                if(!Core::String::IsEmpty(strAlphaPercent)) pHsla[3] /= 100.0f;
-                // ditto again even
-                if(pHsla[3] < 0) pHsla[1] = 0;
-                if(pHsla[3] > 1.0f) pHsla[1] = 1.0f;
-            }
-            else pHsla[4] = 1.0f;
+            // CSS Color 4: a number without % means the same percentage (hsl(120 100 50) == hsl(120 100% 50%))
+            const float fSaturation = std::clamp(Core::ParseFloat(strSaturation), 0.0f, 100.0f) / 100.0f;
+            const float fLightness = std::clamp(Core::ParseFloat(strLightness), 0.0f, 100.0f) / 100.0f;
 
-            if(!strHueUnits.length() || strHueUnits.c_str() == DEGREES_UNIT) {
-                pHsla[0] *= (std::numbers::pi / 180.0f);
+            const bool bAlpha = !Core::String::IsEmpty(strAlpha);
+            float fAlpha = 1.0f;
+            if(bAlpha) {
+                fAlpha = Core::ParseFloat(strAlpha);
+                if(!Core::String::IsEmpty(strAlphaPercent)) fAlpha /= 100.0f;
+                fAlpha = std::clamp(fAlpha, 0.0f, 1.0f);
             }
-            else if(strHueUnits.length()) {
-                // gradians rule, you drool!
-                if(strHueUnits.c_str() == GRADIANS_UNIT) pHsla[0] *= (std::numbers::pi / 200.0f);
-                else if(strHueUnits.c_str() == RADIANS_UNIT) /* noop */;
-                else if(strHueUnits.c_str() == TURN_UNIT) pHsla[0] = (pHsla[0] * 360) * (std::numbers::pi / 180.0f);
-                else throw SvgException("Unrecognized units on hue in hsl(a) value {}: {}", strColour.c_str(), strHueUnits.c_str());
-            }
-            return SvgColour(nSize == 4 ? SvgColourType::HslA : SvgColourType::Hsl, -1, std::move(pHsla));
+
+            std::array<float,4> pHsla { fHue, fSaturation, fLightness, fAlpha };
+            return SvgColour(bAlpha ? SvgColourType::HslA : SvgColourType::Hsl, -1, std::nullopt, std::move(pHsla));
         }
 
         if (strColour == "currentColor") {
@@ -1043,29 +1320,25 @@ namespace Draw2d::Svg {
         if (StandardColours::Colours.contains(strColour)) return SvgColour(SvgColourType::Bgr, -1, StandardColours::BgrOf(strColour));
         
         std::cmatch colourMatch;
-        if (!std::regex_search(strColour.c_str(), colourMatch, HexColourRegex)) throw SvgException("Couldn't recognize value in subParseColour `{}'",strColour.c_str());
-        if ((colourMatch[1].length() % 2) == 1) throw SvgException(std::format("BGR/BGRA must be comprised of 6 or 8 colours, not {}",colourMatch[1].length()));
-        unsigned nBgraLength = colourMatch[1].length() / 2;
-        std::array<uint8_t,4> bgra { };
-        unsigned cIndex = 0;
-        while (cIndex < colourMatch[1].length())
-        {
-            bgra[cIndex / 2] = (uint8_t)Core::ParseInteger(colourMatch[1].str().substr(cIndex, 2), BASE16);
-            cIndex += 2;
+        if (!std::regex_search(strColour.c_str(), colourMatch, HexColourRegex)) throw SvgException("Couldn't recognize hex value `{}'",strColour.c_str());
+        if((colourMatch[1].length() != 3)
+        && (colourMatch[1].length() != 4)
+        && (colourMatch[1].length() != 6)
+        && (colourMatch[1].length() != 8)) throw SvgException(std::format("BGR/BGRA must be comprised of 3, 4, 6, or 8 colours, not {}",colourMatch[1].length()));
+
+        // #rgb / #rgba: one digit per channel, doubled (#abc == #aabbcc); #rrggbb / #rrggbbaa: two
+        const std::string strHex = colourMatch[1].str();
+        const size_t nDigits = strHex.length() <= 4 ? 1 : 2;
+        const size_t nChannels = strHex.length() / nDigits;
+        std::array<uint8_t,4> rgba { 0, 0, 0, 0xff };
+        for(size_t nIndex = 0; nIndex < nChannels; nIndex++) {
+            uint8_t nValue = (uint8_t)Core::ParseInteger(strHex.substr(nIndex * nDigits, nDigits), BASE16);
+            rgba[nIndex] = nDigits == 1 ? static_cast<uint8_t>((nValue << 4) | nValue) : nValue;
         }
 
-        SvgColourType enumColourType = SvgColourType::NotAnSvgColourType;
-        switch (nBgraLength)
-        {
-            case 3: 
-                enumColourType = SvgColourType::Bgr;
-                bgra[3] = 0xff;
-                break;
-            case 4: enumColourType = SvgColourType::BgrA; break;
-            default: throw SvgException("Unable to parse subcolour from {}",strColour.c_str());
-        }
-
-        return SvgColour(enumColourType, -1, std::move(bgra));
+        // stored as B, G, R, A, like StandardColours::BgrOf and rgb()
+        std::array<uint8_t,4> bgra { rgba[2], rgba[1], rgba[0], rgba[3] };
+        return SvgColour(nChannels == 4 ? SvgColourType::BgrA : SvgColourType::Bgr, -1, std::move(bgra));
     } // SvgColour SvgParser::__parseColour(SvgParseState &, const Core::String &, SvgParserContext &)
 
     std::unique_ptr<DataStructures::Tree::GeneralTree<Core::String>> SvgParser::__parseVar(const Core::String &cstrVar)
@@ -1171,29 +1444,34 @@ namespace Draw2d::Svg {
 
         Core::String strId { };
         (void) pGradientElement->tryGetAttribute(ID_ATTRIBUTE, strId);
-        GradientUnits enumGradientUnits = UserSpaceOnUse;
+        pGradientTemplate->strId = std::move(strId);
+
+        // objectBoundingBox unless set, as the spec says
+        pGradientTemplate->enumGradientUnits = ObjectBoundingBox;
         Core::String strGradientUnitsAttribute { };
-        if (pGradientElement->tryGetAttribute(GRADIENTUNITS_ATTRIBUTE, strGradientUnitsAttribute)) enumGradientUnits = (GradientUnits)ParseGradientUnits(strGradientUnitsAttribute);
-        SpreadMethod enumSpreadMethod = SpreadMethod::Pad;
+        if (pGradientElement->tryGetAttribute(GRADIENTUNITS_ATTRIBUTE, strGradientUnitsAttribute)) {
+            pGradientTemplate->enumGradientUnits = (GradientUnits)ParseGradientUnits(strGradientUnitsAttribute);
+            pGradientTemplate->bUnitsSpecified = true;
+        }
+        pGradientTemplate->enumSpreadMethod = SpreadMethod::Pad;
         Core::String strSpreadMethod { };
-        if (pGradientElement->tryGetAttribute(SPREADMETHOD_ATTRIBUTE, strSpreadMethod)) enumSpreadMethod = (SpreadMethod)ParseSpreadMethod(strSpreadMethod);
-        Core::String strValue;
-        std::array<float,6> matrix {};
-        strValue = { };
-        if (pGradientElement->tryGetAttribute(GRADIENTTRANSFORM_ATTRIBUTE, strValue)) matrix = __parseTransform(strValue,"gradientTransform");
-        std::vector<Stop<SvgColour>> stops = __parseStops(svgParseState, pGradientElement, svgParserContext);
+        if (pGradientElement->tryGetAttribute(SPREADMETHOD_ATTRIBUTE, strSpreadMethod)) {
+            pGradientTemplate->enumSpreadMethod = (SpreadMethod)ParseSpreadMethod(strSpreadMethod);
+            pGradientTemplate->bSpreadMethodSpecified = true;
+        }
+        Core::String strTransform { };
+        if (pGradientElement->tryGetAttribute(GRADIENTTRANSFORM_ATTRIBUTE, strTransform)) {
+            pGradientTemplate->transform = __parseTransform(strTransform, GRADIENTTRANSFORM_ATTRIBUTE);
+        }
+        pGradientTemplate->stops = __parseStops(svgParseState, pGradientElement, svgParserContext);
         Core::String strHref = __retrieveHref(svgParseState, pGradientElement);
         strHref.trim_start_in_place(" #");
-
-        pGradientTemplate->strId = std::move(strId);
-        pGradientTemplate->enumGradientUnits = enumGradientUnits;
-        pGradientTemplate->enumSpreadMethod = enumSpreadMethod;
-        pGradientTemplate->transform = std::move(matrix);
-        pGradientTemplate->stops = std::move(stops);
         pGradientTemplate->strHrefId = std::move(strHref);
+        // without an href nothing can supply missing geometry, so the required parts must be here
+        const bool bCanInherit = !Core::String::IsEmpty(pGradientTemplate->strHrefId);
 
         Core::String strGradientNodeName = Xml::String(pGradientElement->getTagName()).getTranscoded();
-        std::unordered_set<Core::String> attributes { 
+        std::unordered_set<Core::String> attributes {
             ID_ATTRIBUTE,
             GRADIENTUNITS_ATTRIBUTE,
             GRADIENTTRANSFORM_ATTRIBUTE,
@@ -1201,91 +1479,45 @@ namespace Draw2d::Svg {
             HREF_ATTRIBUTE,
             SPREADMETHOD_ATTRIBUTE
         };
-;
-        if(strGradientNodeName == LINEAR_GRADIENT_NAME) {
-            float x1, y1, x2, y2;
-            strValue = { };
-            if (!pGradientElement->tryGetAttribute(X1_ATTRIBUTE, strValue)) throw SvgException("Linear Gradient has no x1 attribute");
-            x1 = Core::ParseFloat(strValue);
-            strValue = { };
-            if (!pGradientElement->tryGetAttribute(X2_ATTRIBUTE, strValue)) throw SvgException("Linear Gradient has no x2 attribute");
-            x2 = Core::ParseFloat(strValue);
-            strValue = { };
-            if(!pGradientElement->tryGetAttribute(Y1_ATTRIBUTE, strValue)) throw SvgException("Linear Gradient has no y1 attribute");
-            y1 = Core::ParseFloat(strValue);
-            strValue = { };
-            if (!pGradientElement->tryGetAttribute(Y2_ATTRIBUTE, strValue)) throw SvgException("Linear Gradient has no y2 attribute");
-            y2 = Core::ParseFloat(strValue);
 
-            attributes.insert(X1_ATTRIBUTE);
-            attributes.insert(Y1_ATTRIBUTE);
-            attributes.insert(Y2_ATTRIBUTE);
-            attributes.insert(X2_ATTRIBUTE);
-
-            auto nodeAttributes = pGradientElement->getAttributes();
-            for (auto &kvp : nodeAttributes)
-            {
-                Core::String strNodeName = kvp.first;
-                if (!attributes.contains(strNodeName)) throw SvgException("Unrecognized linear gradient attribute {}",strNodeName);
+        // one geometry attribute: a number, or a percentage (a fraction of the bounding box or viewport)
+        auto readGeometry = [&](size_t nIndex, const Core::String &cstrName, bool bRequired, const char *pszKind) {
+            attributes.insert(cstrName);
+            Core::String strValue { };
+            if (!pGradientElement->tryGetAttribute(cstrName, strValue)) {
+                if (bRequired && !bCanInherit) throw SvgException("{} Gradient has no {} attribute", pszKind, cstrName.c_str());
+                return;
             }
+            strValue = strValue.trim();
+            if (!strValue.empty() && strValue.back() == '%') pGradientTemplate->geometry[nIndex] = Core::ParseFloat(strValue.substr(0, strValue.size() - 1)) / 100.0f;
+            else pGradientTemplate->geometry[nIndex] = Core::ParseFloat(strValue);
+            pGradientTemplate->geometrySpecified[nIndex] = true;
+        };
 
+        if(strGradientNodeName == LINEAR_GRADIENT_NAME) {
             pGradientTemplate->kind = GradientTemplate::linear;
-            pGradientTemplate->geometry[0] = x1; 
-            pGradientTemplate->geometry[1] = y1; 
-            pGradientTemplate->geometry[2] = x2; 
-            pGradientTemplate->geometry[3] = y2; 
+            readGeometry(0, X1_ATTRIBUTE, true, "Linear");
+            readGeometry(1, Y1_ATTRIBUTE, true, "Linear");
+            readGeometry(2, X2_ATTRIBUTE, true, "Linear");
+            readGeometry(3, Y2_ATTRIBUTE, true, "Linear");
         }
         else if(strGradientNodeName == RADIAL_GRADIENT_NAME) {
-            float cx, cy, r, fx = 0.0f, fy = 0.0f, fr = 0.0f;
-            strValue = { };
-            if (!pGradientElement->tryGetAttribute(CX_ATTRIBUTE, strValue)) throw SvgException("Radial Gradient has no cx attribute");
-            cx = Core::ParseFloat(strValue);
-            strValue = { };
-            if (!pGradientElement->tryGetAttribute(CY_ATTRIBUTE, strValue)) throw SvgException("Radial Gradient has no cy attribute");
-            cy = Core::ParseFloat(strValue);
-            strValue = { };
-            if (!pGradientElement->tryGetAttribute(R_ATTRIBUTE, strValue)) throw SvgException("Radial Gradient has no r attribute");
-            r = Core::ParseFloat(strValue);
-            strValue = { };
-            if (pGradientElement->tryGetAttribute(FX_ATTRIBUTE, strValue)) {
-                fx = Core::ParseFloat(strValue);
-            }
-            strValue = { };
-            if (pGradientElement->tryGetAttribute(FY_ATTRIBUTE, strValue)) {
-                fy = Core::ParseFloat(strValue);
-            }
-            strValue = { };
-            if (pGradientElement->tryGetAttribute(FR_ATTRIBUTE, strValue)) {
-                fr = Core::ParseFloat(strValue);
-            }
-
-            attributes.insert(CX_ATTRIBUTE);
-            attributes.insert(CY_ATTRIBUTE);
-            attributes.insert(FR_ATTRIBUTE);
-            attributes.insert(FX_ATTRIBUTE);
-            attributes.insert(FY_ATTRIBUTE);
-            attributes.insert(R_ATTRIBUTE);
-
-            auto nodeAttributes = pGradientElement->getAttributes();
-            for (auto &kvp : nodeAttributes)
-            {
-                Core::String strNodeName = kvp.first;
-                if (!attributes.contains(strNodeName)) throw SvgException("Unrecognized linear gradient attribute {}",strNodeName);
-            }
-
             pGradientTemplate->kind = GradientTemplate::radial;
-            pGradientTemplate->geometry[0] = cx;
-            pGradientTemplate->geometry[1] = cy; 
-            pGradientTemplate->geometry[2] = r; 
-            pGradientTemplate->geometry[3] = fx; 
-            pGradientTemplate->geometry[4] = fy; 
-            pGradientTemplate->geometry[5] = fr; 
+            readGeometry(0, CX_ATTRIBUTE, true, "Radial");
+            readGeometry(1, CY_ATTRIBUTE, true, "Radial");
+            readGeometry(2, R_ATTRIBUTE, true, "Radial");
+            readGeometry(3, FX_ATTRIBUTE, false, "Radial");
+            readGeometry(4, FY_ATTRIBUTE, false, "Radial");
+            readGeometry(5, FR_ATTRIBUTE, false, "Radial");
         }
         else throw SvgException("Invalid gradient node {}",strGradientNodeName.c_str());
 
-        const GradientTemplate *cpGradientTemplate = svgParseState.svgDocument.storeGradient(std::move(pGradientTemplate));
+        for (auto &kvp : pGradientElement->getAttributes())
+        {
+            if (!attributes.contains(kvp.first)) throw SvgException("Unrecognized {} attribute {}", strGradientNodeName.c_str(), kvp.first.c_str());
+        }
 
-        return cpGradientTemplate;
+        return svgParseState.svgDocument.storeGradient(std::move(pGradientTemplate));
     } // const GradientTemplate *SvgParser::__parseGradient(DOMDocument *, DOMElement *)
 
     std::array<float,6> SvgParser::__parseTransform(const Core::String &cstrTransform, const Core::String &cstrAttributeName)
@@ -1374,7 +1606,9 @@ namespace Draw2d::Svg {
             float offset;
             Core::String strOffsetAttribute {};
             if (!pStopNode->tryGetAttribute(OFFSET_ATTRIBUTE, strOffsetAttribute)) throw SvgException("offset is a required attribute");
-            offset = Core::ParseFloat(strOffsetAttribute);
+            strOffsetAttribute = strOffsetAttribute.trim();
+            if (!strOffsetAttribute.empty() && strOffsetAttribute.back() == '%') offset = Core::ParseFloat(strOffsetAttribute.substr(0, strOffsetAttribute.size() - 1)) / 100.0f;
+            else offset = Core::ParseFloat(strOffsetAttribute);
             if (offset < 0 || offset > 1) throw SvgException(std::format("{} is invalid for offset (0 <= offset <= 1)",offset));
             Core::String strStopColourAttribute { };
             if (!pStopNode->tryGetAttribute(STOP_COLOUR_ATTRIBUTE, strStopColourAttribute)) throw SvgException("stop-colour is a required attribute");

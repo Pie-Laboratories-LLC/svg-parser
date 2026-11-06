@@ -40,6 +40,10 @@
     #include "draw2d/Point.hpp"
 #endif
 
+#ifndef DRAW2D_SVG_BLENDMODE_DOT_HPP
+    #include "svg/BlendMode.hpp"
+#endif
+
 namespace Draw2d::Svg {
 
     class Svg;
@@ -65,6 +69,12 @@ namespace Draw2d::Svg {
         float miterLimit = 4.0f;
         std::vector<float> dashArray {};
         float dashOffset = 0.0f;
+        // not inherited: they apply to the element and everything in it, as one layer
+        float opacity = 1.0f;
+        Core::String maskId { };
+        Core::String clipPathId { };
+        BlendMode blendMode = BlendMode::Normal;
+        bool bIsolate = false;
     };
 
     class SvgEntity
@@ -87,6 +97,15 @@ namespace Draw2d::Svg {
         LineJoin getLineJoin() const { return m_enumLineJoin; }
         float getMiterLimit() const { return m_fMiterLimit; }
         const std::vector<float> getDashArray() const { return m_dashArray; }
+        float getOpacity() const { return m_fOpacity; }
+        // the id of the <mask> masking this element, or empty
+        const Core::String &getMaskId() const { return m_strMaskId; }
+        // the id of the <clipPath> clipping this element, or empty
+        const Core::String &getClipPathId() const { return m_strClipPathId; }
+        // mix-blend-mode: how the element combines with what's drawn beneath it
+        BlendMode getBlendMode() const { return m_enumBlendMode; }
+        // isolation: isolate -- its children blend only with each other
+        bool getIsolate() const { return m_bIsolate; }
         const Core::String &getCssClass() const { return m_strCssClass; }
         const Core::String &getCssStyle() const { return m_strCssStyle; }
         virtual const char * const getType() const { return "SvgEntity"; }
@@ -120,6 +139,11 @@ namespace Draw2d::Svg {
         LineJoin m_enumLineJoin = LineJoin::Miter;
         float m_fMiterLimit = 4.0f;
         std::vector<float> m_dashArray { };
+        float m_fOpacity = 1.0f;
+        Core::String m_strMaskId {};
+        Core::String m_strClipPathId {};
+        BlendMode m_enumBlendMode = BlendMode::Normal;
+        bool m_bIsolate = false;
         Core::String m_strCssClass {};
         Core::String m_strCssStyle {};
     }; // class SvgEntity: ISvgEntity

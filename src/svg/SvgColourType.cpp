@@ -55,7 +55,7 @@ namespace Draw2d::Svg {
         case SvgColourType::HslA: return "HslA";
         case SvgColourType::Gradient: return "Gradient";
         case SvgColourType::None: return "None";
-        default: return Core::String("Invalid Illegal Unknown Unrecognized Garbage SvgColourType {}",static_cast<int32_t>(enumSvgColourType));
+        default: return Core::String::Format("Invalid Illegal Unknown Unrecognized Garbage SvgColourType {}",static_cast<int32_t>(enumSvgColourType));
         }
     }
 

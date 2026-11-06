@@ -95,6 +95,18 @@ namespace Draw2d::Svg {
         return duplicate;
     }
 
+    // m∘n: n d'abord, puis m. Matrices SVG (a, b, c, d, e, f):
+    // x' = a x + c y + e, y' = b x + d y + f
+    inline std::array<float,6> compose6(const std::array<float,6> &m, const std::array<float,6> &n)
+    {
+        return { m[0] * n[0] + m[2] * n[1],
+                 m[1] * n[0] + m[3] * n[1],
+                 m[0] * n[2] + m[2] * n[3],
+                 m[1] * n[2] + m[3] * n[3],
+                 m[0] * n[4] + m[2] * n[5] + m[4],
+                 m[1] * n[4] + m[3] * n[5] + m[5] };
+    }
+
 }
 
 #endif  /* DRAW2D_SVG_MATRIXMATH_DOT_HPP */

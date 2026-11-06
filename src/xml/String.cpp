@@ -15,6 +15,7 @@
  */
 
 #include <stdio.h>
+#include <xercesc/util/TransService.hpp>
 
 #include "xml/String.hpp"
 
@@ -114,9 +115,15 @@ namespace Xml {
     } // const unsigned char * const String::transcodeToUtf8(const char * const)
 
     const char * const String::getTranscoded(void) const
-
     {
-        if(m_pszTranscoded == NULL) m_pszTranscoded = XMLString::transcode(m_strString.c_str());
+        // en UTF-8, jamais dans la page de code locale: XMLString::transcode
+        // passe par celle-ci -- CP1252 sous Windows, où ∅ n'existe pas
+        if (m_pszTranscoded == NULL) {
+            TranscodeToStr utf8(reinterpret_cast<const XMLCh *>(m_strString.c_str()), "UTF-8");
+            // terminé par un zéro; le tampon nous revient, alloué par le
+            // gestionnaire de mémoire de Xerces comme celui de transcode
+            m_pszTranscoded = reinterpret_cast<char *>(utf8.adopt());
+        }
         return m_pszTranscoded;
     } // const char * const String::getTranscoded(void) const
 

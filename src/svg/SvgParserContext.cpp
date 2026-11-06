@@ -18,7 +18,8 @@
 
 namespace Draw2d::Svg {
 
-    SvgPaint SvgParserContext::sm_defaultStrokeColour { SvgColourType::Bgr, "", SvgColour { SvgColourType::Bgr, -1, { { 0, 0, 0, 255 } } } };
-    SvgPaint SvgParserContext::sm_defaultFillColour { SvgColourType::Bgr, "", SvgColour { SvgColourType::Bgr, -1, { { 255, 255, 255, 255 } } } };
+    // the SVG initial values: no stroke, black fill
+    SvgPaint SvgParserContext::sm_defaultStrokeColour { SvgColourType::None };
+    SvgPaint SvgParserContext::sm_defaultFillColour { SvgColourType::Bgr, "", SvgColour { SvgColourType::Bgr, -1, { { 0, 0, 0, 255 } } } };
 
 } // namespace Draw2d::Svg

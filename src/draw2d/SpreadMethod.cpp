@@ -31,7 +31,7 @@ namespace Draw2d {
         case SpreadMethod::Pad: return "Pad";
         case SpreadMethod::Reflect: return "Reflect";
         case SpreadMethod::Repeat: return "Repeat";
-        default: return Core::String("Invalid illegal unknown unrecognized unhandled garbage spread method {}",static_cast<int32_t>(enumSpreadMethod));
+        default: return Core::String::Format("Invalid illegal unknown unrecognized unhandled garbage spread method {}",static_cast<int32_t>(enumSpreadMethod));
         }
     }
 

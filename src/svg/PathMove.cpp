@@ -60,7 +60,7 @@ namespace Draw2d::Svg {
         case HorizontalLineTo: return "HorizontalLineTo";
         case VerticalLineTo: return "VerticalLineTo";
         case ArcEllipticTo: return "ArcEllipticTo";
-        default: return Core::String("Invalid Illegal Unknown Garbage PathMove {}",static_cast<int32_t>(enumPathMove));
+        default: return Core::String::Format("Invalid Illegal Unknown Garbage PathMove {}",static_cast<int32_t>(enumPathMove));
         }
     }
 

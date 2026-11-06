@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
     xercesc::XMLPlatformUtils::Initialize();
 #endif
 
-    Core::Logger::Instance(std::unordered_set<const char *,CStrHash,CStrEq> { Draw2d::LoggingCategories::SVG, Draw2d::LoggingCategories::FONTZ }, Core::Info);
+    Core::Logger::Instance(std::unordered_set<const char *,CStrHash,CStrEq> { Draw2d::LoggingCategories::SVG.c_str(), Draw2d::LoggingCategories::FONTZ.c_str() }, Core::LogLevel::Info);
 
     int result = Catch::Session().run(argc, argv);
 

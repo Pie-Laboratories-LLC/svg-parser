@@ -1,9 +1,11 @@
 add_library(svgparser
     core/LogLevel.cpp
     core/Logger.cpp
+    core/LoggerBase.cpp
     core/StdNumeric.cpp
     core/String.cpp
     core/Base64.cpp
+    core/Catégorie.cpp
     data-structures/tree/GeneralTree.cpp
     draw2d/GradientUnits.cpp
     draw2d/Point.cpp
@@ -33,6 +35,13 @@ add_library(svgparser
     svg/Decoding.cpp
     svg/FetchPriority.cpp
     svg/LengthAdjust.cpp
+    svg/HrefKind.cpp
+    svg/BlendColours.cpp
+    svg/BlendMode.cpp
+    svg/FontStyle.cpp
+    svg/StyleSheet.cpp
+    svg/TextAnchor.cpp
+    svg/TextParts.cpp
 )
 add_library(svgparser::svgparser ALIAS svgparser)
 
@@ -57,6 +66,11 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_link_libraries(svgparser PUBLIC stdc++exp)
 endif()
 
+# Linked before Xerces so OpenSSL's include directory is searched first: a
+# Homebrew Xerces lives in /opt/homebrew/include, where whichever openssl is
+# linked (e.g. openssl@4) would otherwise shadow the keg-only one we link.
+target_link_libraries(svgparser PRIVATE OpenSSL::Crypto)
+
 if(SVGPARSER_WITH_XERCES)
     target_sources(svgparser PRIVATE
         xml/XercesDomParserBuilder.cpp
@@ -69,8 +83,6 @@ if(SVGPARSER_WITH_XERCES)
     target_link_libraries(svgparser PUBLIC XercesC::XercesC)
     target_compile_definitions(svgparser PUBLIC SVGPARSER_WITH_XERCES=1)
 endif()
-
-target_link_libraries(svgparser PRIVATE OpenSSL::Crypto)
 
 install(TARGETS svgparser
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

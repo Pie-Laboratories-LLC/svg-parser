@@ -36,7 +36,7 @@ namespace Draw2d::Svg {
         case LengthUnits::Px: return "px";
         case LengthUnits::Mm: return "mm";
         case LengthUnits::Em: return "em";
-        default: return Core::String("Invalid unknown illegal unhandled unrecognized garbage LengthUnits {}", static_cast<int32_t>(enumLengthUnits));
+        default: return Core::String::Format("Invalid unknown illegal unhandled unrecognized garbage LengthUnits {}", static_cast<int32_t>(enumLengthUnits));
         }
     }
 }

@@ -56,7 +56,7 @@ namespace Draw2d::Svg {
         case PreserveAspectRatio::xMinYMax: return "xMinYMax";
         case PreserveAspectRatio::xMidYMax: return "xMidYMax";
         case PreserveAspectRatio::xMaxYMax: return "xMaxYMax";
-        default: return Core::String("Invalid illegal unknown unrecognized unprocessed garbage PreserveAspectRatio {}", static_cast<int32_t>(enumPreserveAspectRatio));
+        default: return Core::String::Format("Invalid illegal unknown unrecognized unprocessed garbage PreserveAspectRatio {}", static_cast<int32_t>(enumPreserveAspectRatio));
         }
     }
 
@@ -75,7 +75,7 @@ namespace Draw2d::Svg {
             case PreserveAspectRatioMode::NotAPreserveAspectRatioMode: return "NotAPreserveAspectRatioMode";
             case PreserveAspectRatioMode::Meet: return "Meet";
             case PreserveAspectRatioMode::Slice: return "Slice";
-            default: return Core::String("Invalid illegal uknown unrecognized unhandled unprocessed garbage PreserveAspectRatioMode {}", static_cast<int32_t>(enumPreserveAspectRatioMode));
+            default: return Core::String::Format("Invalid illegal uknown unrecognized unhandled unprocessed garbage PreserveAspectRatioMode {}", static_cast<int32_t>(enumPreserveAspectRatioMode));
         }
     }
 }
