@@ -11,7 +11,17 @@ It's part of a larger project whose progress can be tracked on
 The particular svg elements covered consist of:
 
 * `<path>`, `<rect>`, `<group>`, `<use>`, `<ellipse>`, `<circle>`, `<defs>`
-  `<linearGradient>`, `<radialGradient>`, `<text>`, `<image>`
+* `<polygon>` and `<polyline>`, as `Polygon` and `Polyline` (both `Path`s)
+* `<linearGradient>`, `<radialGradient>`, including inheritance through `href`
+* `<text>` and nested `<tspan>`: `Text.Parts` gives the content in document
+  order, `Text.Content` the whole text with whitespace collapsed; plus
+  `FontSize`, `FontFamily`, `TextAnchor` and `FontStyle`
+* `<image>`
+* `<mask>` and `<clipPath>`, as `Mask` and `ClipPath`; `SvgEntity.MaskId` and
+  `SvgEntity.ClipPathId` name the ones an element uses
+* CSS from `<style>` elements and `style` attributes, applied at parse time
+* `SvgEntity.Opacity`, `BlendMode` (`mix-blend-mode`) and `Isolate`
+  (`isolation`)
 * fill and stroke operations and "currentColor"
 * limited support for the CSS `var()` primitive in colour attributes, e.g.
   `fill="var(--currentColor,#deadbeef)"`

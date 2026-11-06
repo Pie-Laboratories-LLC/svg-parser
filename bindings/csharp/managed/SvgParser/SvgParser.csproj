@@ -10,7 +10,7 @@
 
 <PropertyGroup>
     <PackageId>PieLaboratories.SvgParser</PackageId>
-    <Version>1.1.0</Version>
+    <Version>2.0.0</Version>
     <Authors>Pie Laboratories, LLC.</Authors>
     <Description>Managed .NET bindings for the Pie Laboratories SvgParser C++ library...</Description>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>

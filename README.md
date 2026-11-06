@@ -132,7 +132,7 @@ notified when such issues occur.
 
 ## ERROR REPORTING
 
-SvgParser can silently skip content it doesn't understand — unrecognized
+SvgParser can silently skip content it doesn't understand â€” unrecognized
 elements, duplicate ids, and similar issues are logged rather than treated
 as fatal, so a single unsupported tag doesn't abort parsing an otherwise
 valid document. To be notified when this happens, register a callback
@@ -238,19 +238,19 @@ requires cross-compiling with MinGW-w64, not Cygwin's native GCC. A few
 things that aren't obvious from a plain `cmake -S . -B build`:
 
 * Don't rely on `CMAKE_PREFIX_PATH` alone to point at a MinGW-packaged
-  dependency (e.g. `mingw64-x86_64-xerces-c`) ¿ this widens *every* header
+  dependency (e.g. `mingw64-x86_64-xerces-c`) â€” this widens *every* header
   search path and can leak MinGW-targeted headers into a Cygwin-native
   compile, producing `#error Only Win32 target is supported!`. Use an
   explicit toolchain file instead, setting `CMAKE_C_COMPILER`/
   `CMAKE_CXX_COMPILER` to the `x86_64-w64-mingw32-*` cross-compiler and
   `CMAKE_FIND_ROOT_PATH` to the MinGW sysroot (see `mingw-toolchain.cmake`
   in the repo root for a working example).
-* Pass `-DSVGPARSER_WITH_CSHARP_BINDINGS=ON` explicitly ¿ without it, only
+* Pass `-DSVGPARSER_WITH_CSHARP_BINDINGS=ON` explicitly â€” without it, only
   the static `svgparser` library builds; the `svgparser_c` shared object
   (the actual DLL the NuGet package needs) is skipped entirely.
 * CTest may fail to auto-run the cross-compiled `.exe` test binary during
   the build itself (`Result: 127`) since Cygwin's shell won't have the
-  MinGW runtime DLLs on `PATH`. This is expected and harmless ¿ it doesn't
+  MinGW runtime DLLs on `PATH`. This is expected and harmless â€” it doesn't
   affect whether the library/DLL themselves built correctly.
 
 Full command:

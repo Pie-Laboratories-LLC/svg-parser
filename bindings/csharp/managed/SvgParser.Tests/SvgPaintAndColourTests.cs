@@ -46,12 +46,13 @@ public class SvgPaintAndColourTests : IDisposable
     private SvgEntity Find(string id) => _document.lookupSvgEntity(id)!;
 
     [Fact]
-    public void HexColourWithAlpha_ParsesAsBgrAInWrittenByteOrder()
+    public void HexColourWithAlpha_ParsesAsBgrA()
     {
+        // #deadbeef is red DE, green AD, blue BE, alpha EF -- stored blue first
         SvgColour colour = Find("p-hex8").FillColour.SvgColour!;
 
         Assert.Equal(SvgColourType.BgrA, colour.SvgColourType);
-        Assert.Equal(new byte[] { 0xDE, 0xAD, 0xBE, 0xEF }, colour.Bgra);
+        Assert.Equal(new byte[] { 0xBE, 0xAD, 0xDE, 0xEF }, colour.Bgra);
     }
 
     [Fact]
@@ -74,7 +75,7 @@ public class SvgPaintAndColourTests : IDisposable
         SvgColour? colourFallback = paint.SvgColour!.Fallback;
         Assert.NotNull(colourFallback);
         Assert.Equal(SvgColourType.BgrA, colourFallback!.SvgColourType);
-        Assert.Equal(new byte[] { 0xDE, 0xAD, 0xBE, 0xEF }, colourFallback.Bgra);
+        Assert.Equal(new byte[] { 0xBE, 0xAD, 0xDE, 0xEF }, colourFallback.Bgra);
     }
 
     [Fact]

@@ -81,14 +81,18 @@ public class SvgEntityTests : IDisposable
     {
         SvgColour colour = _full.FillColour.SvgColour!;
         Assert.Equal(SvgColourType.Bgr, colour.SvgColourType);
-        // Hex pairs are copied into the Bgra array in the order written, not reversed --
-        // fill="#112233" -> Bgra = [0x11, 0x22, 0x33, 0xFF].
-        Assert.Equal(new byte[] { 0x11, 0x22, 0x33, 0xFF }, colour.Bgra);
+        // Bgra is blue, green, red, alpha: fill="#112233" -> Bgra = [0x33, 0x22, 0x11, 0xFF].
+        Assert.Equal(new byte[] { 0x33, 0x22, 0x11, 0xFF }, colour.Bgra);
     }
 
     [Fact]
-    public void FillColour_DefaultsToNone() =>
-        Assert.Equal(SvgColourType.None, _bare.FillColour.SvgColour!.SvgColourType);
+    public void FillColour_DefaultsToBlack()
+    {
+        // fill's initial value is black, per the SVG spec
+        SvgColour colour = _bare.FillColour.SvgColour!;
+        Assert.Equal(SvgColourType.Bgr, colour.SvgColourType);
+        Assert.Equal(new byte[] { 0x00, 0x00, 0x00, 0xFF }, colour.Bgra);
+    }
 
     [Fact]
     public void FillRule_ReturnsSetRule() =>
@@ -111,7 +115,7 @@ public class SvgEntityTests : IDisposable
     {
         SvgColour colour = _full.StrokeColour.SvgColour!;
         Assert.Equal(SvgColourType.Bgr, colour.SvgColourType);
-        Assert.Equal(new byte[] { 0x44, 0x55, 0x66, 0xFF }, colour.Bgra);
+        Assert.Equal(new byte[] { 0x66, 0x55, 0x44, 0xFF }, colour.Bgra);
     }
 
     [Fact]

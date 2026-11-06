@@ -72,6 +72,11 @@ SVGPARSER_API int svgparser_entity_get_line_join(const void* entity);
 SVGPARSER_API float svgparser_entity_get_miter_limit(const void* entity);
 SVGPARSER_API const char *svgparser_entity_get_css_class(const void* entity);
 SVGPARSER_API const char *svgparser_entity_get_css_style(const void* entity);
+SVGPARSER_API float svgparser_entity_get_opacity(const void* entity);
+SVGPARSER_API const char *svgparser_entity_get_mask_id(const void* entity);      // empty if none
+SVGPARSER_API const char *svgparser_entity_get_clip_path_id(const void* entity); // empty if none
+SVGPARSER_API int   svgparser_entity_get_blend_mode(const void* entity);         // BlendMode as int
+SVGPARSER_API int   svgparser_entity_get_isolate(const void* entity);            // 1 if isolation: isolate
 
 // --- SvgPaint accessors ---
 SVGPARSER_API const void* svgparser_entity_get_fill(const void* entity);   // returns SvgPaint*
@@ -180,6 +185,63 @@ SVGPARSER_API void  svgparser_text_get_rotate(const void* text, float* buffer, i
 SVGPARSER_API int   svgparser_text_get_length_adjust(const void* text);
 SVGPARSER_API int   svgparser_text_has_text_length(const void* text);
 SVGPARSER_API float svgparser_text_get_text_length(const void* text);
+
+SVGPARSER_API int   svgparser_text_get_text_length_percentage(const void* text);
+SVGPARSER_API int   svgparser_text_has_font_size(const void* text);
+SVGPARSER_API float svgparser_text_get_font_size(const void* text);
+SVGPARSER_API int   svgparser_text_has_font_size_units(const void* text);
+SVGPARSER_API int   svgparser_text_get_font_size_units(const void* text);       // DimensionUnits as int
+SVGPARSER_API const char *svgparser_text_get_font_family(const void* text);     // null if absent
+SVGPARSER_API int   svgparser_text_has_text_anchor(const void* text);
+SVGPARSER_API int   svgparser_text_get_text_anchor(const void* text);           // TextAnchor as int
+SVGPARSER_API int   svgparser_text_has_font_style(const void* text);
+SVGPARSER_API int   svgparser_text_get_font_style(const void* text);            // FontStyle as int
+SVGPARSER_API const void* svgparser_text_get_raw_text(const void* text);        // returns const RawText*
+
+// --- RawText: the content of a <text> or <tspan>, strings and tspans in document order ---
+SVGPARSER_API int         svgparser_rawtext_get_part_count(const void* rawText);
+SVGPARSER_API int         svgparser_rawtext_part_is_tspan(const void* rawText, int index);
+SVGPARSER_API const char* svgparser_rawtext_get_part_string(const void* rawText, int index); // null if a tspan or out of range
+SVGPARSER_API const void* svgparser_rawtext_get_part_tspan(const void* rawText, int index);  // returns const TSpan*, null if a string or out of range
+// all the text, tspans included, with whitespace collapsed; returns the length in bytes
+// (excluding the terminator) and copies as much as fits, null-terminated, into buffer
+SVGPARSER_API int         svgparser_rawtext_concatenate(const void* rawText, char* buffer, int bufferSize);
+
+// --- TSpan ---
+SVGPARSER_API const void* svgparser_tspan_get_raw_text(const void* tspan);      // returns const RawText*
+SVGPARSER_API int   svgparser_tspan_get_x_count(const void* tspan);
+SVGPARSER_API void  svgparser_tspan_get_x(const void* tspan, float* buffer, int bufferSize);
+SVGPARSER_API int   svgparser_tspan_get_y_count(const void* tspan);
+SVGPARSER_API void  svgparser_tspan_get_y(const void* tspan, float* buffer, int bufferSize);
+SVGPARSER_API int   svgparser_tspan_get_dx_count(const void* tspan);
+SVGPARSER_API void  svgparser_tspan_get_dx(const void* tspan, float* buffer, int bufferSize);
+SVGPARSER_API int   svgparser_tspan_get_dy_count(const void* tspan);
+SVGPARSER_API void  svgparser_tspan_get_dy(const void* tspan, float* buffer, int bufferSize);
+SVGPARSER_API int   svgparser_tspan_get_rotate_count(const void* tspan);
+SVGPARSER_API void  svgparser_tspan_get_rotate(const void* tspan, float* buffer, int bufferSize);
+SVGPARSER_API int   svgparser_tspan_get_length_adjust(const void* tspan);
+SVGPARSER_API int   svgparser_tspan_has_text_length(const void* tspan);
+SVGPARSER_API float svgparser_tspan_get_text_length(const void* tspan);
+SVGPARSER_API int   svgparser_tspan_get_text_length_percentage(const void* tspan);
+
+// --- Mask ---
+SVGPARSER_API int   svgparser_mask_has_x(const void* mask);
+SVGPARSER_API float svgparser_mask_get_x_measurement(const void* mask);
+SVGPARSER_API int   svgparser_mask_get_x_units(const void* mask);
+SVGPARSER_API int   svgparser_mask_has_y(const void* mask);
+SVGPARSER_API float svgparser_mask_get_y_measurement(const void* mask);
+SVGPARSER_API int   svgparser_mask_get_y_units(const void* mask);
+SVGPARSER_API int   svgparser_mask_has_width(const void* mask);
+SVGPARSER_API float svgparser_mask_get_width_measurement(const void* mask);
+SVGPARSER_API int   svgparser_mask_get_width_units(const void* mask);
+SVGPARSER_API int   svgparser_mask_has_height(const void* mask);
+SVGPARSER_API float svgparser_mask_get_height_measurement(const void* mask);
+SVGPARSER_API int   svgparser_mask_get_height_units(const void* mask);
+SVGPARSER_API int   svgparser_mask_get_mask_units(const void* mask);            // GradientUnits as int
+SVGPARSER_API int   svgparser_mask_get_mask_content_units(const void* mask);    // GradientUnits as int
+
+// --- ClipPath ---
+SVGPARSER_API int   svgparser_clippath_get_clip_path_units(const void* clipPath); // GradientUnits as int
 
 // --- Svg ---
 SVGPARSER_API int   svgparser_svg_get_preserve_aspect_ratio(const void* svg);

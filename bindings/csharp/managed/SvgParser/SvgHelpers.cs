@@ -34,6 +34,10 @@ public static class SvgHelpers {
         case "Ellipse": return new Ellipse(entity);
         case "Svg": return new Svg(entity);
         case "Path": return new Path(entity);
+        case "Polygon": return new Polygon(entity);
+        case "Polyline": return new Polyline(entity);
+        case "Mask": return new Mask(entity);
+        case "ClipPath": return new ClipPath(entity);
         case "Use": return new Use(entity);
         case "Group": return new Group(entity);
         default: throw new Exception($"Unrecognized type {SvgParserNative.PtrToString(SvgParserNative.svgparser_entity_get_type(entity))}");

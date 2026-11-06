@@ -52,6 +52,15 @@ public class SvgEntity {
     }
     virtual public string CssClass => SvgParserNative.PtrToString(SvgParserNative.svgparser_entity_get_css_class(_entity));
     virtual public string CssStyle => SvgParserNative.PtrToString(SvgParserNative.svgparser_entity_get_css_style(_entity));
+    virtual public float Opacity => SvgParserNative.svgparser_entity_get_opacity(_entity);
+    // the id of the <mask> masking this element, or empty
+    virtual public string MaskId => SvgParserNative.PtrToString(SvgParserNative.svgparser_entity_get_mask_id(_entity));
+    // the id of the <clipPath> clipping this element, or empty
+    virtual public string ClipPathId => SvgParserNative.PtrToString(SvgParserNative.svgparser_entity_get_clip_path_id(_entity));
+    // mix-blend-mode: how the element combines with what's drawn beneath it
+    virtual public BlendMode BlendMode => SvgParserNative.GetBlendMode(_entity);
+    // isolation: isolate -- its children blend only with each other
+    virtual public bool Isolate => SvgParserNative.svgparser_entity_get_isolate(_entity) > 0;
     virtual public string Type => SvgParserNative.PtrToString(SvgParserNative.svgparser_entity_get_type(_entity));
 
     virtual public bool IsDimensionedEntity {

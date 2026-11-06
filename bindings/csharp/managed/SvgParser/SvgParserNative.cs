@@ -169,6 +169,24 @@ internal static class SvgParserNative {
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern IntPtr svgparser_entity_get_css_style(IntPtr entity);
 
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_entity_get_opacity(IntPtr entity);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern IntPtr svgparser_entity_get_mask_id(IntPtr entity);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern IntPtr svgparser_entity_get_clip_path_id(IntPtr entity);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_entity_get_blend_mode(IntPtr entity);
+
+    public static BlendMode GetBlendMode(IntPtr entity) =>
+        (BlendMode)svgparser_entity_get_blend_mode(entity);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_entity_get_isolate(IntPtr entity);
+
 
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern IntPtr svgparser_entity_get_fill(IntPtr entity);   // returns SvgPaint*
@@ -512,6 +530,181 @@ internal static class SvgParserNative {
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern float svgparser_text_get_text_length(IntPtr text);
 
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_text_get_text_length_percentage(IntPtr text);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_text_has_font_size(IntPtr text);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_text_get_font_size(IntPtr text);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_text_has_font_size_units(IntPtr text);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_text_get_font_size_units(IntPtr text);
+
+    public static DimensionUnits GetFontSizeUnits(IntPtr text) =>
+        (DimensionUnits)svgparser_text_get_font_size_units(text);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern IntPtr svgparser_text_get_font_family(IntPtr text);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_text_has_text_anchor(IntPtr text);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_text_get_text_anchor(IntPtr text);
+
+    public static TextAnchor GetTextAnchor(IntPtr text) =>
+        (TextAnchor)svgparser_text_get_text_anchor(text);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_text_has_font_style(IntPtr text);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_text_get_font_style(IntPtr text);
+
+    public static FontStyle GetFontStyle(IntPtr text) =>
+        (FontStyle)svgparser_text_get_font_style(text);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern IntPtr svgparser_text_get_raw_text(IntPtr text);
+
+    // --- RawText ---
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_rawtext_get_part_count(IntPtr rawText);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_rawtext_part_is_tspan(IntPtr rawText, int index);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern IntPtr svgparser_rawtext_get_part_string(IntPtr rawText, int index);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern IntPtr svgparser_rawtext_get_part_tspan(IntPtr rawText, int index);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_rawtext_concatenate(IntPtr rawText, byte[]? buffer, int bufferSize);
+
+    // --- TSpan ---
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern IntPtr svgparser_tspan_get_raw_text(IntPtr tspan);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_tspan_get_x_count(IntPtr tspan);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern void svgparser_tspan_get_x(IntPtr tspan, float[] buffer, int bufferSize);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_tspan_get_y_count(IntPtr tspan);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern void svgparser_tspan_get_y(IntPtr tspan, float[] buffer, int bufferSize);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_tspan_get_dx_count(IntPtr tspan);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern void svgparser_tspan_get_dx(IntPtr tspan, float[] buffer, int bufferSize);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_tspan_get_dy_count(IntPtr tspan);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern void svgparser_tspan_get_dy(IntPtr tspan, float[] buffer, int bufferSize);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_tspan_get_rotate_count(IntPtr tspan);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern void svgparser_tspan_get_rotate(IntPtr tspan, float[] buffer, int bufferSize);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_tspan_get_length_adjust(IntPtr tspan);
+
+    public static LengthAdjust GetTSpanLengthAdjust(IntPtr tspan) =>
+        (LengthAdjust)svgparser_tspan_get_length_adjust(tspan);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_tspan_has_text_length(IntPtr tspan);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_tspan_get_text_length(IntPtr tspan);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_tspan_get_text_length_percentage(IntPtr tspan);
+
+    // --- Mask ---
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_mask_has_x(IntPtr mask);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_mask_get_x_measurement(IntPtr mask);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_mask_get_x_units(IntPtr mask);
+
+    public static DimensionUnits GetMaskXUnits(IntPtr mask) =>
+        (DimensionUnits)svgparser_mask_get_x_units(mask);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_mask_has_y(IntPtr mask);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_mask_get_y_measurement(IntPtr mask);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_mask_get_y_units(IntPtr mask);
+
+    public static DimensionUnits GetMaskYUnits(IntPtr mask) =>
+        (DimensionUnits)svgparser_mask_get_y_units(mask);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_mask_has_width(IntPtr mask);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_mask_get_width_measurement(IntPtr mask);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_mask_get_width_units(IntPtr mask);
+
+    public static DimensionUnits GetMaskWidthUnits(IntPtr mask) =>
+        (DimensionUnits)svgparser_mask_get_width_units(mask);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern int svgparser_mask_has_height(IntPtr mask);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern float svgparser_mask_get_height_measurement(IntPtr mask);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_mask_get_height_units(IntPtr mask);
+
+    public static DimensionUnits GetMaskHeightUnits(IntPtr mask) =>
+        (DimensionUnits)svgparser_mask_get_height_units(mask);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_mask_get_mask_units(IntPtr mask);
+
+    public static GradientUnits GetMaskUnits(IntPtr mask) =>
+        (GradientUnits)svgparser_mask_get_mask_units(mask);
+
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_mask_get_mask_content_units(IntPtr mask);
+
+    public static GradientUnits GetMaskContentUnits(IntPtr mask) =>
+        (GradientUnits)svgparser_mask_get_mask_content_units(mask);
+
+    // --- ClipPath ---
+    [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int svgparser_clippath_get_clip_path_units(IntPtr clipPath);
+
+    public static GradientUnits GetClipPathUnits(IntPtr clipPath) =>
+        (GradientUnits)svgparser_clippath_get_clip_path_units(clipPath);
+
     // --- Svg ---
 
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
@@ -540,6 +733,16 @@ internal static class SvgParserNative {
 
     [DllImport(LibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern float svgparser_svg_get_viewbox_height(IntPtr svg);
+
+    // helper: concatenateText() builds a new string, so it's copied out through a buffer
+    // sized by a first call, rather than returned as a pointer into the document
+    public static string ConcatenateText(IntPtr rawText) {
+        int length = svgparser_rawtext_concatenate(rawText, null, 0);
+        if(length <= 0) return string.Empty;
+        byte[] buffer = new byte[length + 1];
+        svgparser_rawtext_concatenate(rawText, buffer, buffer.Length);
+        return Encoding.UTF8.GetString(buffer, 0, length);
+    }
 
     // helper: marshal a returned const char* into a managed string
     public static string PtrToString(IntPtr ptr) =>

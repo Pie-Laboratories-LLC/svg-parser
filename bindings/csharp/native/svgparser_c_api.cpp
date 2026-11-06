@@ -1,3 +1,4 @@
+#include <cstring>
 #include <xercesc/util/PlatformUtils.hpp>
 #include "svgparser_c_api.h"
 #include "svg/SvgParser.hpp"
@@ -12,6 +13,9 @@
 #include "svg/Image.hpp"
 #include "svg/Text.hpp"
 #include "svg/Svg.hpp"
+#include "svg/Mask.hpp"
+#include "svg/ClipPath.hpp"
+#include "svg/TextParts.hpp"
 #include "core/Logger.hpp"
 
 using namespace Draw2d::Svg;
@@ -299,6 +303,41 @@ const char *svgparser_entity_get_css_style(const void* entity)
 {
     try {
         return static_cast<const SvgEntity*>(entity)->getCssStyle().c_str();
+    } catch (...) { return 0; }
+}
+
+float svgparser_entity_get_opacity(const void* entity)
+{
+    try {
+        return static_cast<const SvgEntity*>(entity)->getOpacity();
+    } catch (...) { return 1.0f; }
+}
+
+const char *svgparser_entity_get_mask_id(const void* entity)
+{
+    try {
+        return static_cast<const SvgEntity*>(entity)->getMaskId().c_str();
+    } catch (...) { return nullptr; }
+}
+
+const char *svgparser_entity_get_clip_path_id(const void* entity)
+{
+    try {
+        return static_cast<const SvgEntity*>(entity)->getClipPathId().c_str();
+    } catch (...) { return nullptr; }
+}
+
+int svgparser_entity_get_blend_mode(const void* entity)
+{
+    try {
+        return static_cast<int>(static_cast<const SvgEntity*>(entity)->getBlendMode());
+    } catch (...) { return 0; }
+}
+
+int svgparser_entity_get_isolate(const void* entity)
+{
+    try {
+        return static_cast<const SvgEntity*>(entity)->getIsolate() ? 1 : 0;
     } catch (...) { return 0; }
 }
 
@@ -713,6 +752,230 @@ int svgparser_text_has_text_length(const void* text) {
 
 float svgparser_text_get_text_length(const void* text) {
     try { return static_cast<const Text*>(text)->getTextLength().value(); } catch (...) { return 0.0f; }
+}
+
+int svgparser_text_get_text_length_percentage(const void* text) {
+    try { return static_cast<const Text*>(text)->getTextLengthPercentage() ? 1 : 0; } catch (...) { return 0; }
+}
+
+int svgparser_text_has_font_size(const void* text) {
+    try { return static_cast<const Text*>(text)->getFontSize().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+
+float svgparser_text_get_font_size(const void* text) {
+    try { return static_cast<const Text*>(text)->getFontSize().value(); } catch (...) { return 0.0f; }
+}
+
+int svgparser_text_has_font_size_units(const void* text) {
+    try { return static_cast<const Text*>(text)->getFontSizeUnits().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+
+int svgparser_text_get_font_size_units(const void* text) {
+    try { return static_cast<int>(static_cast<const Text*>(text)->getFontSizeUnits().value()); } catch (...) { return -1; }
+}
+
+const char* svgparser_text_get_font_family(const void* text) {
+    try {
+        const auto &fontFamily = static_cast<const Text*>(text)->getFontFamily();
+        return fontFamily.has_value() ? fontFamily->c_str() : nullptr;
+    } catch (...) { return nullptr; }
+}
+
+int svgparser_text_has_text_anchor(const void* text) {
+    try { return static_cast<const Text*>(text)->getTextAnchor().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+
+int svgparser_text_get_text_anchor(const void* text) {
+    try { return static_cast<int>(static_cast<const Text*>(text)->getTextAnchor().value()); } catch (...) { return -1; }
+}
+
+int svgparser_text_has_font_style(const void* text) {
+    try { return static_cast<const Text*>(text)->getFontStyle().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+
+int svgparser_text_get_font_style(const void* text) {
+    try { return static_cast<int>(static_cast<const Text*>(text)->getFontStyle().value()); } catch (...) { return -1; }
+}
+
+const void* svgparser_text_get_raw_text(const void* text) {
+    try { return &static_cast<const Text*>(text)->getRawText(); } catch (...) { return nullptr; }
+}
+
+// --- RawText ---
+
+int svgparser_rawtext_get_part_count(const void* rawText) {
+    try { return static_cast<int>(static_cast<const RawText*>(rawText)->getTexts().size()); } catch (...) { return 0; }
+}
+
+int svgparser_rawtext_part_is_tspan(const void* rawText, int index) {
+    try {
+        const auto &texts = static_cast<const RawText*>(rawText)->getTexts();
+        if (index < 0 || static_cast<size_t>(index) >= texts.size()) return 0;
+        return std::holds_alternative<std::unique_ptr<TSpan>>(texts[index]) ? 1 : 0;
+    } catch (...) { return 0; }
+}
+
+const char* svgparser_rawtext_get_part_string(const void* rawText, int index) {
+    try {
+        const auto &texts = static_cast<const RawText*>(rawText)->getTexts();
+        if (index < 0 || static_cast<size_t>(index) >= texts.size()) return nullptr;
+        const auto *pString = std::get_if<Core::String>(&texts[index]);
+        return pString ? pString->c_str() : nullptr;
+    } catch (...) { return nullptr; }
+}
+
+const void* svgparser_rawtext_get_part_tspan(const void* rawText, int index) {
+    try {
+        const auto &texts = static_cast<const RawText*>(rawText)->getTexts();
+        if (index < 0 || static_cast<size_t>(index) >= texts.size()) return nullptr;
+        const auto *ppTSpan = std::get_if<std::unique_ptr<TSpan>>(&texts[index]);
+        return ppTSpan ? ppTSpan->get() : nullptr;
+    } catch (...) { return nullptr; }
+}
+
+int svgparser_rawtext_concatenate(const void* rawText, char* buffer, int bufferSize) {
+    try {
+        Core::String text = concatenateText(*static_cast<const RawText*>(rawText));
+        int length = static_cast<int>(std::strlen(text.c_str()));
+        if (buffer && bufferSize > 0) {
+            int count = std::min(bufferSize - 1, length);
+            std::memcpy(buffer, text.c_str(), count);
+            buffer[count] = '\0';
+        }
+        return length;
+    } catch (...) { return 0; }
+}
+
+// --- TSpan ---
+
+const void* svgparser_tspan_get_raw_text(const void* tspan) {
+    try { return &static_cast<const TSpan*>(tspan)->getText(); } catch (...) { return nullptr; }
+}
+
+int svgparser_tspan_get_x_count(const void* tspan) {
+    try { return static_cast<int>(static_cast<const TSpan*>(tspan)->getX().size()); } catch (...) { return 0; }
+}
+
+void svgparser_tspan_get_x(const void* tspan, float* buffer, int bufferSize) {
+    try {
+        const auto &values = static_cast<const TSpan*>(tspan)->getX();
+        int count = std::min(bufferSize, static_cast<int>(values.size()));
+        std::copy(values.begin(), values.begin() + count, buffer);
+    } catch (...) {}
+}
+
+int svgparser_tspan_get_y_count(const void* tspan) {
+    try { return static_cast<int>(static_cast<const TSpan*>(tspan)->getY().size()); } catch (...) { return 0; }
+}
+
+void svgparser_tspan_get_y(const void* tspan, float* buffer, int bufferSize) {
+    try {
+        const auto &values = static_cast<const TSpan*>(tspan)->getY();
+        int count = std::min(bufferSize, static_cast<int>(values.size()));
+        std::copy(values.begin(), values.begin() + count, buffer);
+    } catch (...) {}
+}
+
+int svgparser_tspan_get_dx_count(const void* tspan) {
+    try { return static_cast<int>(static_cast<const TSpan*>(tspan)->getDx().size()); } catch (...) { return 0; }
+}
+
+void svgparser_tspan_get_dx(const void* tspan, float* buffer, int bufferSize) {
+    try {
+        const auto &values = static_cast<const TSpan*>(tspan)->getDx();
+        int count = std::min(bufferSize, static_cast<int>(values.size()));
+        std::copy(values.begin(), values.begin() + count, buffer);
+    } catch (...) {}
+}
+
+int svgparser_tspan_get_dy_count(const void* tspan) {
+    try { return static_cast<int>(static_cast<const TSpan*>(tspan)->getDy().size()); } catch (...) { return 0; }
+}
+
+void svgparser_tspan_get_dy(const void* tspan, float* buffer, int bufferSize) {
+    try {
+        const auto &values = static_cast<const TSpan*>(tspan)->getDy();
+        int count = std::min(bufferSize, static_cast<int>(values.size()));
+        std::copy(values.begin(), values.begin() + count, buffer);
+    } catch (...) {}
+}
+
+int svgparser_tspan_get_rotate_count(const void* tspan) {
+    try { return static_cast<int>(static_cast<const TSpan*>(tspan)->getRotate().size()); } catch (...) { return 0; }
+}
+
+void svgparser_tspan_get_rotate(const void* tspan, float* buffer, int bufferSize) {
+    try {
+        const auto &values = static_cast<const TSpan*>(tspan)->getRotate();
+        int count = std::min(bufferSize, static_cast<int>(values.size()));
+        std::copy(values.begin(), values.begin() + count, buffer);
+    } catch (...) {}
+}
+
+int svgparser_tspan_get_length_adjust(const void* tspan) {
+    try { return static_cast<int>(static_cast<const TSpan*>(tspan)->getLengthAdjust()); } catch (...) { return 0; }
+}
+
+int svgparser_tspan_has_text_length(const void* tspan) {
+    try { return static_cast<const TSpan*>(tspan)->getTextLength().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+
+float svgparser_tspan_get_text_length(const void* tspan) {
+    try { return static_cast<const TSpan*>(tspan)->getTextLength().value(); } catch (...) { return 0.0f; }
+}
+
+int svgparser_tspan_get_text_length_percentage(const void* tspan) {
+    try { return static_cast<const TSpan*>(tspan)->getTextLengthPercentage() ? 1 : 0; } catch (...) { return 0; }
+}
+
+// --- Mask ---
+int svgparser_mask_has_x(const void* mask) {
+    try { return static_cast<const Mask*>(mask)->getX().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+float svgparser_mask_get_x_measurement(const void* mask) {
+    try { return static_cast<const Mask*>(mask)->getX().value().fValue; } catch (...) { return 0.0f; }
+}
+int svgparser_mask_get_x_units(const void* mask) {
+    try { return static_cast<int>(static_cast<const Mask*>(mask)->getX().value().enumUnits); } catch (...) { return -1; }
+}
+int svgparser_mask_has_y(const void* mask) {
+    try { return static_cast<const Mask*>(mask)->getY().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+float svgparser_mask_get_y_measurement(const void* mask) {
+    try { return static_cast<const Mask*>(mask)->getY().value().fValue; } catch (...) { return 0.0f; }
+}
+int svgparser_mask_get_y_units(const void* mask) {
+    try { return static_cast<int>(static_cast<const Mask*>(mask)->getY().value().enumUnits); } catch (...) { return -1; }
+}
+int svgparser_mask_has_width(const void* mask) {
+    try { return static_cast<const Mask*>(mask)->getWidth().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+float svgparser_mask_get_width_measurement(const void* mask) {
+    try { return static_cast<const Mask*>(mask)->getWidth().value().fValue; } catch (...) { return 0.0f; }
+}
+int svgparser_mask_get_width_units(const void* mask) {
+    try { return static_cast<int>(static_cast<const Mask*>(mask)->getWidth().value().enumUnits); } catch (...) { return -1; }
+}
+int svgparser_mask_has_height(const void* mask) {
+    try { return static_cast<const Mask*>(mask)->getHeight().has_value() ? 1 : 0; } catch (...) { return 0; }
+}
+float svgparser_mask_get_height_measurement(const void* mask) {
+    try { return static_cast<const Mask*>(mask)->getHeight().value().fValue; } catch (...) { return 0.0f; }
+}
+int svgparser_mask_get_height_units(const void* mask) {
+    try { return static_cast<int>(static_cast<const Mask*>(mask)->getHeight().value().enumUnits); } catch (...) { return -1; }
+}
+int svgparser_mask_get_mask_units(const void* mask) {
+    try { return static_cast<int>(static_cast<const Mask*>(mask)->getMaskUnits()); } catch (...) { return -1; }
+}
+int svgparser_mask_get_mask_content_units(const void* mask) {
+    try { return static_cast<int>(static_cast<const Mask*>(mask)->getMaskContentUnits()); } catch (...) { return -1; }
+}
+
+// --- ClipPath ---
+
+int svgparser_clippath_get_clip_path_units(const void* clipPath) {
+    try { return static_cast<int>(static_cast<const ClipPath*>(clipPath)->getClipPathUnits()); } catch (...) { return -1; }
 }
 
 // --- Svg ---
