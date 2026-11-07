@@ -3,6 +3,7 @@ name: Build and Test
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -11,7 +12,50 @@ permissions:
   id-token: write   # required so the workflow can request an OIDC token
 
 jobs:
+  # Decides whether this run is a release. It is one only when HEAD carries an
+  # annotated vX.Y.Z tag and HEAD is also the tip of main; then the tag becomes the
+  # version and the pack job publishes. Anything else builds and tests only.
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.describe.outputs.release }}
+      version: ${{ steps.describe.outputs.version }}
+      cmake-version: ${{ steps.describe.outputs.cmake-version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Describe HEAD
+        id: describe
+        run: |
+          git fetch --force --tags origin main
+          head=$(git rev-parse HEAD)
+          main=$(git rev-parse origin/main)
+          tag=$(git describe --exact-match --match 'v[0-9]*' HEAD 2>/dev/null || true)
+
+          release=false
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            echo "Pull request: build only."
+          elif [ -z "$tag" ]; then
+            echo "No annotated version tag on $head: build only."
+          elif [ "$head" != "$main" ]; then
+            echo "Tag $tag is on $head, but main is at $main: build only."
+          else
+            version=${tag#v}
+            if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+              echo "::error::Tag $tag is not a valid version (expected vX.Y.Z or vX.Y.Z-suffix)"
+              exit 1
+            fi
+            release=true
+            echo "Releasing $version from tag $tag."
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+            echo "cmake-version=${version%%-*}" >> "$GITHUB_OUTPUT"
+          fi
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+
   build-and-test:
+    needs: version
     strategy:
       fail-fast: false
       matrix:
@@ -30,6 +74,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Stamp version from tag
+        if: needs.version.outputs.release == 'true'
+        shell: bash
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          CMAKE_VERSION: ${{ needs.version.outputs.cmake-version }}
+        run: |
+          perl -pi -e 's|<Version>[^<]*</Version>|<Version>$ENV{VERSION}</Version>|' bindings/csharp/managed/SvgParser/SvgParser.csproj
+          perl -0pi -e 's/(project\s*\([^)]*?VERSION\s+)[0-9.]+/$1$ENV{CMAKE_VERSION}/s' CMakeLists.txt
+          grep -n '<Version>' bindings/csharp/managed/SvgParser/SvgParser.csproj
+          grep -n -A3 '^project' CMakeLists.txt
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
@@ -82,10 +138,26 @@ jobs:
         run: dotnet test bindings/csharp/managed/SvgParser.Tests --no-build
 
   pack:
-    needs: build-and-test
+    needs: [version, build-and-test]
     runs-on: ubuntu-latest
+    # Pushing main and its tag together starts two runs for the same commit;
+    # this keeps their publishes from overlapping (--skip-duplicate covers the rest).
+    concurrency:
+      group: pack-${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Stamp version from tag
+        if: needs.version.outputs.release == 'true'
+        shell: bash
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          CMAKE_VERSION: ${{ needs.version.outputs.cmake-version }}
+        run: |
+          perl -pi -e 's|<Version>[^<]*</Version>|<Version>$ENV{VERSION}</Version>|' bindings/csharp/managed/SvgParser/SvgParser.csproj
+          perl -0pi -e 's/(project\s*\([^)]*?VERSION\s+)[0-9.]+/$1$ENV{CMAKE_VERSION}/s' CMakeLists.txt
+          grep -n '<Version>' bindings/csharp/managed/SvgParser/SvgParser.csproj
+          grep -n -A3 '^project' CMakeLists.txt
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
@@ -112,15 +184,16 @@ jobs:
         run: dotnet pack bindings/csharp/managed/SvgParser -c Release -o .
 
       - name: NuGet login (OIDC - temp API key)
+        if: needs.version.outputs.release == 'true'
         uses: NuGet/login@v1
         id: nuget-login
         with:
           user: kazaak
       
       - name: Push to NuGet.org
-        if: github.event_name == 'workflow_dispatch'
-        run: dotnet nuget push *.nupkg --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json
+        if: needs.version.outputs.release == 'true'
+        run: dotnet nuget push *.nupkg --skip-duplicate --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json
 
       - name: Push to GitHub Packages
-        if: github.event_name == 'workflow_dispatch'
-        run: dotnet nuget push *.nupkg --source https://nuget.pkg.github.com/Pie-Laboratories-LLC/index.json --api-key ${{ secrets.GH_PACKAGES_PAT }}
+        if: needs.version.outputs.release == 'true'
+        run: dotnet nuget push *.nupkg --skip-duplicate --source https://nuget.pkg.github.com/Pie-Laboratories-LLC/index.json --api-key ${{ secrets.GH_PACKAGES_PAT }}
